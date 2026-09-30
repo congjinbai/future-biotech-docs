@@ -1,57 +1,100 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#0f172a" />
-  <title>FUTURE BIOTECH · 文件系统</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=yes">
+<title>FUTURE BIOTECH 文件系统</title>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="shell">
-    <section id="loginView" class="card auth-card">
-      <div class="brand"><div class="brand-mark">FB</div><div><h1>FUTURE BIOTECH</h1><p>Документы · 文件系统</p></div></div>
-      <div class="lang-row"><button class="lang-btn active" data-lang="zh">中文</button><button class="lang-btn" data-lang="ru">Русский</button></div>
-      <form id="loginForm" class="form-stack">
-        <label><span data-i18n="loginId">个人编号 / ID</span><input id="loginId" autocomplete="username" placeholder="FB001" required /></label>
-        <label><span data-i18n="password">密码</span><input id="password" type="password" autocomplete="current-password" required /></label>
-        <button class="primary" type="submit" data-i18n="login">登录</button><p id="loginError" class="error hidden"></p>
-      </form>
-      <p class="privacy-note" data-i18n="privacy">每位用户只能访问分配给自己的文件。</p>
+<div id="loginView" class="center-shell">
+  <div class="login-card">
+    <div class="brand">FUTURE BIOTECH</div>
+    <h1>文件系统 / Документы</h1>
+    <form id="loginForm">
+      <label>个人编号 / Личный ID<input id="loginId" autocomplete="username" required></label>
+      <label>密码 / Пароль<input id="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">登录 / Войти</button>
+    </form>
+    <div id="loginError" class="error hidden"></div>
+  </div>
+</div>
+
+<div id="appView" class="app hidden">
+  <header class="topbar">
+    <div><strong>FUTURE BIOTECH</strong><div id="who" class="muted"></div></div>
+    <div class="top-actions">
+      <button id="toggleLang" class="ghost">中 / RU</button>
+      <button id="logoutBtn" class="ghost">退出</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="userHome" class="panel">
+      <div class="section-head">
+        <div><h2 id="myDocsTitle">我的文件</h2><p id="myDocsHint" class="muted">只显示分配给您的文件。</p></div>
+      </div>
+      <div id="userDocs" class="grid"></div>
+      <div id="userEmpty" class="empty hidden">目前没有文件。</div>
     </section>
 
-    <section id="appView" class="hidden">
-      <header class="topbar"><div><div class="eyebrow">FUTURE BIOTECH</div><h2 id="helloName"></h2></div><div class="top-actions"><button id="switchLangBtn" class="ghost">RU / 中文</button><button id="logoutBtn" class="ghost danger" data-i18n="logout">退出</button></div></header>
-      <section id="documentListView"><div class="section-head"><h3 data-i18n="myDocs">我的文件</h3><p data-i18n="chooseDoc">选择需要填写或签署的文件。</p></div><div id="documentList" class="doc-grid"></div><div id="emptyState" class="card empty hidden" data-i18n="noDocs">目前没有分配给您的文件。</div></section>
+    <section id="adminHome" class="hidden">
+      <nav class="admin-tabs">
+        <button data-tab="templates" class="active">模板</button>
+        <button data-tab="documents">文件</button>
+        <button data-tab="users">账户</button>
+      </nav>
 
-      <section id="documentView" class="hidden">
-        <div class="doc-toolbar no-print"><button id="backBtn" class="ghost">← <span data-i18n="back">返回文件列表</span></button><div class="toolbar-actions"><button id="printBtn" class="ghost" data-i18n="print">打印 / PDF</button><button id="signModeBtn" class="primary" data-i18n="onlineSign">在线签字</button></div></div>
+      <section id="tab-templates" class="panel admin-tab">
+        <div class="section-head">
+          <div><h2>原始模板</h2><p class="muted">把您原来的 4 个源代码文件导入这里。导入后源代码保存在 Supabase，不会公开放在 GitHub。</p></div>
+        </div>
+        <div id="templateList"></div>
+      </section>
 
-        <div class="language-notice no-print"><strong id="currentLanguageLabel"></strong><span data-i18n="singleLanguageHint">填写和签字时只显示当前语言；最终文件自动生成俄中左右双栏。</span></div>
-        <div id="documentPaper" class="paper single-paper"></div>
+      <section id="tab-documents" class="panel admin-tab hidden">
+        <div class="section-head">
+          <div><h2>文件管理</h2><p class="muted">创建、复制、发放、收回或删除文件。</p></div>
+          <button id="newDocBtn" class="primary">＋ 新建文件</button>
+        </div>
+        <div id="adminDocs"></div>
+      </section>
 
-        <section class="card editor no-print">
-          <h3 data-i18n="fillInfo">填写信息</h3>
-          <div id="dynamicFields" class="field-grid"></div>
-          <div id="signSection" class="signature-wrap hidden">
-            <div class="signature-head"><div><strong data-i18n="signature">手写签名</strong><div id="signatureLanguageNote" class="muted smalltext"></div></div><button id="clearSignatureBtn" class="ghost small" data-i18n="clear">清除</button></div>
-            <canvas id="signaturePad" width="1000" height="300"></canvas>
-            <div class="signature-actions"><button id="cancelSignBtn" class="ghost" data-i18n="cancel">取消</button><button id="confirmSignatureBtn" class="primary" data-i18n="confirmSignature">确认此语言签字</button></div>
-          </div>
-        </section>
-
-        <section id="finalPreviewSection" class="card final-section hidden no-print">
-          <div class="final-head"><div><h3 data-i18n="finalPreview">最终双语文件</h3><p data-i18n="finalHint">左右分别为俄文和中文；两种语言的签字互不复制。</p></div><div class="toolbar-actions"><button id="finalImageBtn" class="primary" data-i18n="image">生成图片</button><button id="finalPrintBtn" class="ghost" data-i18n="print">打印 / PDF</button></div></div>
-          <div id="finalPaper" class="paper final-paper"></div>
-        </section>
-
-        <section id="imageResult" class="card result hidden no-print"><h3 data-i18n="generated">已生成</h3><img id="generatedImage" alt="generated document" /><a id="downloadImage" class="primary link-button" download="document.png" data-i18n="saveImage">保存图片</a></section>
+      <section id="tab-users" class="panel admin-tab hidden">
+        <div class="section-head">
+          <div><h2>账户</h2><p class="muted">管理员可查看账户及每个账户收到的文件。</p></div>
+        </div>
+        <div class="notice">当前版本的账户“创建/改密码”仍通过 Supabase Authentication 完成；文件发放、收回、复制、删除已经在本系统内完成。</div>
+        <div id="userList"></div>
       </section>
     </section>
   </main>
-  <div id="printRoot" class="print-only"></div>
-  <script src="config.js"></script><script src="app.js"></script>
+</div>
+
+<dialog id="docDialog">
+  <form method="dialog" class="dialog-card" id="docForm">
+    <div class="dialog-head"><h3>新建文件</h3><button value="cancel" class="icon-btn">×</button></div>
+    <label>选择模板<select id="docTemplate" required></select></label>
+    <label>俄文标题<input id="docTitleRu" required></label>
+    <label>中文标题<input id="docTitleZh" required></label>
+    <fieldset><legend>发放对象</legend>
+      <div class="row"><button type="button" id="selectAllUsers" class="ghost small">全选</button><button type="button" id="clearUsers" class="ghost small">清空</button></div>
+      <div id="recipientList" class="check-list"></div>
+    </fieldset>
+    <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button id="createDocConfirm" value="default" class="primary">创建并发放</button></div>
+  </form>
+</dialog>
+
+<dialog id="assignDialog">
+  <form method="dialog" class="dialog-card">
+    <div class="dialog-head"><h3>调整发放对象</h3><button value="cancel" class="icon-btn">×</button></div>
+    <div id="assignRecipientList" class="check-list"></div>
+    <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button id="saveAssignments" value="default" class="primary">保存</button></div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

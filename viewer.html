@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在打开文件…</title>
+<style>body{font-family:system-ui;background:#eef2f7;margin:0;padding:40px;text-align:center;color:#17324d}.box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08)}.err{color:#b42318}</style>
+</head>
+<body><div class="box" id="status">正在验证权限并打开文件…</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+(async()=>{
+ const cfg=window.APP_CONFIG; const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+ const id=new URLSearchParams(location.search).get('id');
+ const {data:{session}}=await sb.auth.getSession();
+ if(!session){location.replace('./');return}
+ if(!id){document.getElementById('status').innerHTML='<span class="err">缺少文件编号。</span>';return}
+ const {data,error}=await sb.from('documents').select('id,source_html,title_ru,title_zh').eq('id',id).single();
+ if(error||!data){document.getElementById('status').innerHTML='<span class="err">没有权限查看此文件，或文件不存在。</span>';return}
+ if(!data.source_html){document.getElementById('status').innerHTML='<span class="err">该文件尚未导入原始源代码。</span>';return}
+ document.open(); document.write(data.source_html); document.close();
+})();
+</script></body></html>
