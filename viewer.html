@@ -1,21 +1,29 @@
-<!doctype html>
-<html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在打开文件…</title>
-<style>body{font-family:system-ui;background:#eef2f7;margin:0;padding:40px;text-align:center;color:#17324d}.box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08)}.err{color:#b42318}</style>
-</head>
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>正在打开文件…</title>
+<style>body{font-family:system-ui;background:#eef2f7;margin:0;padding:40px;text-align:center;color:#17324d}.box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08)}.err{color:#b42318}</style></head>
 <body><div class="box" id="status">正在验证权限并打开文件…</div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script>
 (async()=>{
- const cfg=window.APP_CONFIG; const sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
- const id=new URLSearchParams(location.search).get('id');
- const {data:{session}}=await sb.auth.getSession();
- if(!session){location.replace('./');return}
+ const cfg=window.APP_CONFIG,sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+ const qs=new URLSearchParams(location.search),id=qs.get('id'),requestedAdmin=qs.get('mode')==='admin';
+ const {data:{session}}=await sb.auth.getSession(); if(!session){location.replace('./');return}
  if(!id){document.getElementById('status').innerHTML='<span class="err">缺少文件编号。</span>';return}
+ let adminMode=false;
+ if(requestedAdmin){const {data:p}=await sb.from('profiles').select('is_admin').eq('id',session.user.id).single();adminMode=!!p?.is_admin}
  const {data,error}=await sb.from('documents').select('id,source_html,title_ru,title_zh').eq('id',id).single();
  if(error||!data){document.getElementById('status').innerHTML='<span class="err">没有权限查看此文件，或文件不存在。</span>';return}
  if(!data.source_html){document.getElementById('status').innerHTML='<span class="err">该文件尚未导入原始源代码。</span>';return}
- document.open(); document.write(data.source_html); document.close();
+ const nav=`<style id="fh-system-style">
+ .fh-system-nav{position:fixed;left:10px;top:10px;z-index:2147483647;display:flex;gap:8px;align-items:center;font-family:system-ui,-apple-system,sans-serif}
+ .fh-system-nav button{border:0;border-radius:999px;padding:9px 13px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer}
+ .fh-readonly-badge{background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}
+ ${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}
+ </style><div class="fh-system-nav"><button type="button" onclick="location.href='./${adminMode?'#documents':''}'">← ${adminMode?'返回文件管理':'返回我的文件'}</button>${adminMode?'<span class="fh-readonly-badge">管理员只读查看</span>':''}</div>`;
+ const bottom=`<div style="max-width:680px;width:calc(100% - 24px);margin:18px auto 30px;text-align:center;font-family:system-ui"><button type="button" onclick="location.href='./${adminMode?'#documents':''}'" style="border:0;border-radius:999px;padding:12px 22px;background:#0b4f86;color:#fff;font-weight:700;font-size:14px;cursor:pointer">← ${adminMode?'返回文件管理':'退出文件，返回文件列表'}</button></div>`;
+ let html=data.source_html;
+ html=html.replace(/<body([^>]*)>/i,m=>m+nav);
+ html=html.replace(/<\/body>/i,bottom+'</body>');
+ if(adminMode){html=html.replace(/<script(?![^>]*src=)[\s\S]*?<\/script>/gi,m=>m);}
+ document.open();document.write(html);document.close();
+ if(adminMode){setTimeout(()=>{document.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.closest('.fh-system-nav'))return;if(el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true;});},50)}
 })();
 </script></body></html>

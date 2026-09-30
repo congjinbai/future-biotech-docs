@@ -3,27 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=yes">
-<title>FUTURE BIOTECH 文件系统</title>
+<title>FUTURE HEALTH 文件系统</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div id="loginView" class="center-shell">
   <div class="login-card">
-    <div class="brand">FUTURE BIOTECH</div>
+    <img src="future-health-logo.png" alt="FUTURE HEALTH" class="login-logo">
     <h1>文件系统 / Документы</h1>
     <form id="loginForm">
       <label>个人编号 / Личный ID<input id="loginId" autocomplete="username" required></label>
       <label>密码 / Пароль<input id="password" type="password" autocomplete="current-password" required></label>
-      <button class="primary" type="submit">登录 / Войти</button>
+      <button class="primary wide" type="submit">登录 / Войти</button>
     </form>
+    <p class="login-help">忘记密码？请联系管理员。管理员可以把密码恢复为初始密码 <strong>12345678</strong>。</p>
     <div id="loginError" class="error hidden"></div>
   </div>
 </div>
 
 <div id="appView" class="app hidden">
   <header class="topbar">
-    <div><strong>FUTURE BIOTECH</strong><div id="who" class="muted"></div></div>
+    <div class="brand-wrap"><img src="future-health-logo.png" alt="FUTURE HEALTH" class="top-logo"><div id="who" class="muted"></div></div>
     <div class="top-actions">
+      <button id="changeMyPasswordBtn" class="ghost">修改密码</button>
       <button id="toggleLang" class="ghost">中 / RU</button>
       <button id="logoutBtn" class="ghost">退出</button>
     </div>
@@ -31,9 +33,7 @@
 
   <main>
     <section id="userHome" class="panel">
-      <div class="section-head">
-        <div><h2 id="myDocsTitle">我的文件</h2><p id="myDocsHint" class="muted">只显示分配给您的文件。</p></div>
-      </div>
+      <div class="section-head"><div><h2 id="myDocsTitle">我的文件</h2><p id="myDocsHint" class="muted">只显示分配给您的文件。</p></div></div>
       <div id="userDocs" class="grid"></div>
       <div id="userEmpty" class="empty hidden">目前没有文件。</div>
     </section>
@@ -47,14 +47,15 @@
 
       <section id="tab-templates" class="panel admin-tab">
         <div class="section-head">
-          <div><h2>原始模板</h2><p class="muted">把您原来的 4 个源代码文件导入这里。导入后源代码保存在 Supabase，不会公开放在 GitHub。</p></div>
+          <div><h2>模板管理</h2><p class="muted">可导入、替换、新增或删除模板。已有文件不会因为删除模板而自动删除。</p></div>
+          <button id="newTemplateBtn" class="primary">＋ 添加模板</button>
         </div>
         <div id="templateList"></div>
       </section>
 
       <section id="tab-documents" class="panel admin-tab hidden">
         <div class="section-head">
-          <div><h2>文件管理</h2><p class="muted">创建、复制、发放、收回或删除文件。</p></div>
+          <div><h2>文件管理</h2><p class="muted">创建、复制、发放、收回或删除文件。管理员“查看”时为只读模式。</p></div>
           <button id="newDocBtn" class="primary">＋ 新建文件</button>
         </div>
         <div id="adminDocs"></div>
@@ -62,7 +63,7 @@
 
       <section id="tab-users" class="panel admin-tab hidden">
         <div class="section-head">
-          <div><h2>账户</h2><p class="muted">管理员可以直接创建账户、修改姓名、重置密码和删除账户。</p></div>
+          <div><h2>账户</h2><p class="muted">可修改账户姓名；管理员也可以管理自己的账户。密码可一键恢复为 12345678。</p></div>
           <button id="newUserBtn" class="primary">＋ 新建账户</button>
         </div>
         <div id="userList"></div>
@@ -71,59 +72,64 @@
   </main>
 </div>
 
-<dialog id="userDialog">
-  <form method="dialog" class="dialog-card" id="userForm">
-    <div class="dialog-head"><h3>新建账户</h3><button value="cancel" class="icon-btn">×</button></div>
-    <label>个人编号 / Личный ID<input id="newEmployeeCode" autocomplete="off" required placeholder="例如 ANNA001"></label>
-    <label>俄文姓名<input id="newNameRu" autocomplete="off" placeholder="Моряхина Анна Владимировна"></label>
-    <label>中文姓名<input id="newNameZh" autocomplete="off" placeholder="莫里亚希娜·安娜·弗拉基米罗夫娜"></label>
-    <label>初始密码<input id="newPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="至少 8 位"></label>
-    <div class="muted" style="margin-top:8px">创建后，使用“个人编号 + 密码”即可登录。个人编号建立后不建议修改。</div>
-    <div id="userCreateError" class="error hidden"></div>
-    <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button id="createUserConfirm" value="default" class="primary">创建账户</button></div>
-  </form>
-</dialog>
+<dialog id="userDialog"><form method="dialog" class="dialog-card" id="userForm">
+  <div class="dialog-head"><h3>新建账户</h3><button value="cancel" class="icon-btn">×</button></div>
+  <label>个人编号 / Личный ID<input id="newEmployeeCode" autocomplete="off" required placeholder="例如 ANNA001"></label>
+  <label>俄文姓名<input id="newNameRu" autocomplete="off" placeholder="Моряхина Анна Владимировна"></label>
+  <label>中文姓名<input id="newNameZh" autocomplete="off" placeholder="莫里亚希娜·安娜·弗拉基米罗夫娜"></label>
+  <div class="notice">新账户统一使用初始密码：<strong>12345678</strong><br>使用者登录后可以自行修改。</div>
+  <div id="userCreateError" class="error hidden"></div>
+  <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button id="createUserConfirm" value="default" class="primary">创建账户</button></div>
+</form></dialog>
 
-<dialog id="editUserDialog">
-  <form method="dialog" class="dialog-card">
-    <div class="dialog-head"><h3>账户管理</h3><button value="cancel" class="icon-btn">×</button></div>
-    <input id="editUserId" type="hidden">
-    <div class="notice" id="editUserCode"></div>
-    <label>俄文姓名<input id="editNameRu" autocomplete="off"></label>
-    <label>中文姓名<input id="editNameZh" autocomplete="off"></label>
-    <div class="dialog-actions"><button type="button" id="saveUserProfile" class="primary">保存姓名</button></div>
-    <hr style="border:0;border-top:1px solid #e1e8f0;margin:18px 0">
-    <label>新密码<input id="resetPassword" type="password" autocomplete="new-password" minlength="8" placeholder="至少 8 位"></label>
-    <div class="dialog-actions"><button type="button" id="resetPasswordBtn" class="ghost">重置密码</button></div>
-    <hr style="border:0;border-top:1px solid #e1e8f0;margin:18px 0">
-    <button type="button" id="deleteUserBtn" class="danger" style="width:100%">删除这个账户</button>
-  </form>
-</dialog>
+<dialog id="editUserDialog"><form method="dialog" class="dialog-card">
+  <div class="dialog-head"><h3>账户管理</h3><button value="cancel" class="icon-btn">×</button></div>
+  <input id="editUserId" type="hidden">
+  <div class="notice" id="editUserCode"></div>
+  <label>俄文姓名<input id="editNameRu" autocomplete="off"></label>
+  <label>中文姓名<input id="editNameZh" autocomplete="off"></label>
+  <div class="dialog-actions"><button type="button" id="saveUserProfile" class="primary">保存账户名称</button></div>
+  <hr class="sep">
+  <div class="notice">忘记密码时，可直接恢复为初始密码 <strong>12345678</strong>。使用者登录后再自行设置新密码。</div>
+  <div class="dialog-actions"><button type="button" id="resetPasswordBtn" class="ghost">恢复初始密码 12345678</button></div>
+  <hr class="sep">
+  <button type="button" id="deleteUserBtn" class="danger wide">删除这个账户</button>
+</form></dialog>
 
-<dialog id="docDialog">
-  <form method="dialog" class="dialog-card" id="docForm">
-    <div class="dialog-head"><h3>新建文件</h3><button value="cancel" class="icon-btn">×</button></div>
-    <label>选择模板<select id="docTemplate" required></select></label>
-    <label>俄文标题<input id="docTitleRu" required></label>
-    <label>中文标题<input id="docTitleZh" required></label>
-    <fieldset><legend>发放对象</legend>
-      <div class="row"><button type="button" id="selectAllUsers" class="ghost small">全选</button><button type="button" id="clearUsers" class="ghost small">清空</button></div>
-      <div id="recipientList" class="check-list"></div>
-    </fieldset>
-    <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button id="createDocConfirm" value="default" class="primary">创建并发放</button></div>
-  </form>
-</dialog>
+<dialog id="changePasswordDialog"><form method="dialog" class="dialog-card">
+  <div class="dialog-head"><h3>修改自己的密码</h3><button value="cancel" class="icon-btn">×</button></div>
+  <label>新密码<input id="myNewPassword" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 位"></label>
+  <label>再次输入新密码<input id="myNewPassword2" type="password" minlength="8" autocomplete="new-password"></label>
+  <div id="myPasswordError" class="error hidden"></div>
+  <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button type="button" id="saveMyPassword" class="primary">保存新密码</button></div>
+</form></dialog>
 
-<dialog id="assignDialog">
-  <form method="dialog" class="dialog-card">
-    <div class="dialog-head"><h3>调整发放对象</h3><button value="cancel" class="icon-btn">×</button></div>
-    <div id="assignRecipientList" class="check-list"></div>
-    <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button id="saveAssignments" value="default" class="primary">保存</button></div>
-  </form>
-</dialog>
+<dialog id="templateDialog"><form method="dialog" class="dialog-card">
+  <div class="dialog-head"><h3>添加新模板</h3><button value="cancel" class="icon-btn">×</button></div>
+  <label>中文标题<input id="templateTitleZh" required placeholder="例如：新申请书"></label>
+  <label>俄文标题<input id="templateTitleRu" required placeholder="Например: Новое заявление"></label>
+  <label>模板源代码<input id="templateSourceFile" type="file" accept=".txt,.html,text/plain,text/html" required></label>
+  <div class="muted">新模板会作为独立模板保存，之后可以在“新建文件”时选择。</div>
+  <div id="templateCreateError" class="error hidden"></div>
+  <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button type="button" id="createTemplateConfirm" class="primary">添加模板</button></div>
+</form></dialog>
+
+<dialog id="docDialog"><form method="dialog" class="dialog-card" id="docForm">
+  <div class="dialog-head"><h3>新建文件</h3><button value="cancel" class="icon-btn">×</button></div>
+  <label>选择模板<select id="docTemplate" required></select></label>
+  <label>俄文标题<input id="docTitleRu" required></label>
+  <label>中文标题<input id="docTitleZh" required></label>
+  <fieldset><legend>发放对象</legend><div class="row"><button type="button" id="selectAllUsers" class="ghost small">全选</button><button type="button" id="clearUsers" class="ghost small">清空</button></div><div id="recipientList" class="check-list"></div></fieldset>
+  <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button id="createDocConfirm" value="default" class="primary">创建并发放</button></div>
+</form></dialog>
+
+<dialog id="assignDialog"><form method="dialog" class="dialog-card">
+  <div class="dialog-head"><h3>调整发放对象</h3><button value="cancel" class="icon-btn">×</button></div>
+  <div id="assignRecipientList" class="check-list"></div>
+  <div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button id="saveAssignments" value="default" class="primary">保存</button></div>
+</form></dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
-</body>
-</html>
+</body></html>
