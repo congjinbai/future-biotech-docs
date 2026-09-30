@@ -12,90 +12,46 @@
 <body>
   <main class="shell">
     <section id="loginView" class="card auth-card">
-      <div class="brand">
-        <div class="brand-mark">FB</div>
-        <div>
-          <h1>FUTURE BIOTECH</h1>
-          <p>Документы · 文件系统</p>
-        </div>
-      </div>
-
-      <div class="lang-row">
-        <button class="lang-btn active" data-lang="zh">中文</button>
-        <button class="lang-btn" data-lang="ru">Русский</button>
-      </div>
-
+      <div class="brand"><div class="brand-mark">FB</div><div><h1>FUTURE BIOTECH</h1><p>Документы · 文件系统</p></div></div>
+      <div class="lang-row"><button class="lang-btn active" data-lang="zh">中文</button><button class="lang-btn" data-lang="ru">Русский</button></div>
       <form id="loginForm" class="form-stack">
-        <label>
-          <span data-i18n="loginId">个人编号 / ID</span>
-          <input id="loginId" autocomplete="username" placeholder="FB001" required />
-        </label>
-        <label>
-          <span data-i18n="password">密码 / Пароль</span>
-          <input id="password" type="password" autocomplete="current-password" required />
-        </label>
-        <button class="primary" type="submit" data-i18n="login">登录</button>
-        <p id="loginError" class="error hidden"></p>
+        <label><span data-i18n="loginId">个人编号 / ID</span><input id="loginId" autocomplete="username" placeholder="FB001" required /></label>
+        <label><span data-i18n="password">密码</span><input id="password" type="password" autocomplete="current-password" required /></label>
+        <button class="primary" type="submit" data-i18n="login">登录</button><p id="loginError" class="error hidden"></p>
       </form>
       <p class="privacy-note" data-i18n="privacy">每位用户只能访问分配给自己的文件。</p>
     </section>
 
     <section id="appView" class="hidden">
-      <header class="topbar">
-        <div>
-          <div class="eyebrow">FUTURE BIOTECH</div>
-          <h2 id="helloName">我的文件</h2>
-        </div>
-        <div class="top-actions">
-          <button id="switchLangBtn" class="ghost">RU / 中文</button>
-          <button id="logoutBtn" class="ghost danger" data-i18n="logout">退出</button>
-        </div>
-      </header>
-
-      <section id="documentListView">
-        <div class="section-head">
-          <div>
-            <h3 data-i18n="myDocs">我的文件</h3>
-            <p data-i18n="chooseDoc">选择需要填写或签署的文件。</p>
-          </div>
-        </div>
-        <div id="documentList" class="doc-grid"></div>
-        <div id="emptyState" class="card empty hidden" data-i18n="noDocs">目前没有分配给您的文件。</div>
-      </section>
+      <header class="topbar"><div><div class="eyebrow">FUTURE BIOTECH</div><h2 id="helloName"></h2></div><div class="top-actions"><button id="switchLangBtn" class="ghost">RU / 中文</button><button id="logoutBtn" class="ghost danger" data-i18n="logout">退出</button></div></header>
+      <section id="documentListView"><div class="section-head"><h3 data-i18n="myDocs">我的文件</h3><p data-i18n="chooseDoc">选择需要填写或签署的文件。</p></div><div id="documentList" class="doc-grid"></div><div id="emptyState" class="card empty hidden" data-i18n="noDocs">目前没有分配给您的文件。</div></section>
 
       <section id="documentView" class="hidden">
-        <div class="doc-toolbar no-print">
-          <button id="backBtn" class="ghost">← <span data-i18n="back">返回文件列表</span></button>
-          <div class="toolbar-actions">
-            <button id="printBtn" class="ghost" data-i18n="print">打印 / PDF</button>
-            <button id="imageBtn" class="primary" data-i18n="image">生成图片</button>
-          </div>
-        </div>
+        <div class="doc-toolbar no-print"><button id="backBtn" class="ghost">← <span data-i18n="back">返回文件列表</span></button><div class="toolbar-actions"><button id="printBtn" class="ghost" data-i18n="print">打印 / PDF</button><button id="signModeBtn" class="primary" data-i18n="onlineSign">在线签字</button></div></div>
 
-        <div id="documentPaper" class="paper"></div>
+        <div class="language-notice no-print"><strong id="currentLanguageLabel"></strong><span data-i18n="singleLanguageHint">填写和签字时只显示当前语言；最终文件自动生成俄中左右双栏。</span></div>
+        <div id="documentPaper" class="paper single-paper"></div>
 
         <section class="card editor no-print">
           <h3 data-i18n="fillInfo">填写信息</h3>
           <div id="dynamicFields" class="field-grid"></div>
-          <div class="signature-wrap">
-            <div class="signature-head">
-              <strong data-i18n="signature">手写签名</strong>
-              <button id="clearSignatureBtn" class="ghost small" data-i18n="clear">清除</button>
-            </div>
-            <canvas id="signaturePad" width="900" height="260"></canvas>
+          <div id="signSection" class="signature-wrap hidden">
+            <div class="signature-head"><div><strong data-i18n="signature">手写签名</strong><div id="signatureLanguageNote" class="muted smalltext"></div></div><button id="clearSignatureBtn" class="ghost small" data-i18n="clear">清除</button></div>
+            <canvas id="signaturePad" width="1000" height="300"></canvas>
+            <div class="signature-actions"><button id="cancelSignBtn" class="ghost" data-i18n="cancel">取消</button><button id="confirmSignatureBtn" class="primary" data-i18n="confirmSignature">确认此语言签字</button></div>
           </div>
         </section>
 
-        <section id="imageResult" class="card result hidden no-print">
-          <h3 data-i18n="generated">已生成</h3>
-          <img id="generatedImage" alt="generated document" />
-          <a id="downloadImage" class="primary link-button" download="document.png" data-i18n="saveImage">保存图片</a>
+        <section id="finalPreviewSection" class="card final-section hidden no-print">
+          <div class="final-head"><div><h3 data-i18n="finalPreview">最终双语文件</h3><p data-i18n="finalHint">左右分别为俄文和中文；两种语言的签字互不复制。</p></div><div class="toolbar-actions"><button id="finalImageBtn" class="primary" data-i18n="image">生成图片</button><button id="finalPrintBtn" class="ghost" data-i18n="print">打印 / PDF</button></div></div>
+          <div id="finalPaper" class="paper final-paper"></div>
         </section>
+
+        <section id="imageResult" class="card result hidden no-print"><h3 data-i18n="generated">已生成</h3><img id="generatedImage" alt="generated document" /><a id="downloadImage" class="primary link-button" download="document.png" data-i18n="saveImage">保存图片</a></section>
       </section>
     </section>
   </main>
-
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <div id="printRoot" class="print-only"></div>
+  <script src="config.js"></script><script src="app.js"></script>
 </body>
 </html>

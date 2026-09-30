@@ -1,145 +1,40 @@
 (() => {
-  const cfg = window.APP_CONFIG || {};
-  const configured = cfg.SUPABASE_URL && !cfg.SUPABASE_URL.includes('YOUR_') && cfg.SUPABASE_ANON_KEY && !cfg.SUPABASE_ANON_KEY.includes('YOUR_');
-  const supabase = configured ? window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY) : null;
-
-  const I18N = {
-    zh:{loginId:'个人编号 / ID',password:'密码',login:'登录',privacy:'每位用户只能访问分配给自己的文件。',logout:'退出',myDocs:'我的文件',chooseDoc:'选择需要填写或签署的文件。',noDocs:'目前没有分配给您的文件。',back:'返回文件列表',print:'打印 / PDF',image:'生成图片',fillInfo:'填写信息',signature:'手写签名',clear:'清除',generated:'已生成',saveImage:'保存图片',badLogin:'账号或密码错误。',notConfigured:'网站尚未连接数据库。请先完成 Supabase 配置。'},
-    ru:{loginId:'Личный ID',password:'Пароль',login:'Войти',privacy:'Каждый пользователь видит только назначенные ему документы.',logout:'Выйти',myDocs:'Мои документы',chooseDoc:'Выберите документ для заполнения или подписания.',noDocs:'Для вас пока нет назначенных документов.',back:'К списку документов',print:'Печать / PDF',image:'Создать изображение',fillInfo:'Заполнить информацию',signature:'Рукописная подпись',clear:'Очистить',generated:'Готово',saveImage:'Сохранить изображение',badLogin:'Неверный ID или пароль.',notConfigured:'Сайт ещё не подключён к базе данных. Сначала настройте Supabase.'}
+  const cfg=window.APP_CONFIG||{};
+  const configured=cfg.SUPABASE_URL&&!cfg.SUPABASE_URL.includes('YOUR_')&&cfg.SUPABASE_ANON_KEY&&!cfg.SUPABASE_ANON_KEY.includes('YOUR_');
+  const supabase=configured?window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY):null;
+  const I18N={
+    zh:{loginId:'个人编号 / ID',password:'密码',login:'登录',privacy:'每位用户只能访问分配给自己的文件。',logout:'退出',myDocs:'我的文件',chooseDoc:'选择需要填写或签署的文件。',noDocs:'目前没有分配给您的文件。',back:'返回文件列表',print:'打印 / PDF',onlineSign:'在线签字',fillInfo:'填写信息',signature:'手写签名',clear:'清除',cancel:'取消',confirmSignature:'确认此语言签字',finalPreview:'最终双语文件',finalHint:'左右分别为俄文和中文；两种语言的签字互不复制。',image:'生成图片',generated:'已生成',saveImage:'保存图片',badLogin:'账号或密码错误。',notConfigured:'网站尚未连接数据库。',singleLanguageHint:'填写和签字时只显示当前语言；最终文件自动生成俄中左右双栏。'},
+    ru:{loginId:'Личный ID',password:'Пароль',login:'Войти',privacy:'Каждый пользователь видит только назначенные ему документы.',logout:'Выйти',myDocs:'Мои документы',chooseDoc:'Выберите документ для заполнения или подписания.',noDocs:'Для вас пока нет назначенных документов.',back:'К списку документов',print:'Печать / PDF',onlineSign:'Онлайн-подписание',fillInfo:'Заполнить информацию',signature:'Рукописная подпись',clear:'Очистить',cancel:'Отмена',confirmSignature:'Подтвердить подпись этой версии',finalPreview:'Итоговый двуязычный документ',finalHint:'Русская и китайская версии расположены рядом; подписи не копируются между языками.',image:'Создать изображение',generated:'Готово',saveImage:'Сохранить изображение',badLogin:'Неверный ID или пароль.',notConfigured:'Сайт ещё не подключён к базе данных.',singleLanguageHint:'При заполнении и подписании показывается только выбранный язык; итоговый файл формируется в двух колонках.'}
   };
-
-  let lang = localStorage.getItem('fb_lang') || 'zh';
-  let profile = null;
-  let documents = [];
-  let currentDoc = null;
-  let signatureData = '';
-
-  const $ = s => document.querySelector(s);
-  const $$ = s => [...document.querySelectorAll(s)];
-
-  const els = {
-    loginView:$('#loginView'), appView:$('#appView'), loginForm:$('#loginForm'), loginId:$('#loginId'), password:$('#password'), loginError:$('#loginError'),
-    helloName:$('#helloName'), documentList:$('#documentList'), emptyState:$('#emptyState'), documentListView:$('#documentListView'), documentView:$('#documentView'), documentPaper:$('#documentPaper'),
-    dynamicFields:$('#dynamicFields'), signaturePad:$('#signaturePad'), imageResult:$('#imageResult'), generatedImage:$('#generatedImage'), downloadImage:$('#downloadImage')
-  };
-
-  function t(key){ return I18N[lang][key] || key; }
-  function setLang(next){ lang=next; localStorage.setItem('fb_lang',lang); document.documentElement.lang=lang==='zh'?'zh-CN':'ru'; $$('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n)); $$('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); if(currentDoc) renderDocument(); else if(profile) renderList(); }
-
-  $$('.lang-btn').forEach(btn=>btn.addEventListener('click',()=>setLang(btn.dataset.lang)));
-  $('#switchLangBtn').addEventListener('click',()=>setLang(lang==='zh'?'ru':'zh'));
-
-  els.loginForm.addEventListener('submit', async e => {
-    e.preventDefault();
-    els.loginError.classList.add('hidden');
-    if(!configured){ showLoginError(t('notConfigured')); return; }
-    const id = els.loginId.value.trim().toUpperCase();
-    const email = `${id.toLowerCase()}@${cfg.LOGIN_EMAIL_DOMAIN || 'futurebiotech.local'}`;
-    const { error } = await supabase.auth.signInWithPassword({ email, password: els.password.value });
-    if(error){ showLoginError(t('badLogin')); return; }
-    await bootAuthenticated();
-  });
-
-  function showLoginError(msg){ els.loginError.textContent=msg; els.loginError.classList.remove('hidden'); }
-
-  async function bootAuthenticated(){
-    const { data:{ user } } = await supabase.auth.getUser();
-    if(!user) return showLogin();
-    const { data:p, error:pe } = await supabase.from('profiles').select('id,employee_code,display_name_ru,display_name_zh').eq('id',user.id).single();
-    if(pe || !p){ await supabase.auth.signOut(); showLoginError('Profile not found'); return; }
-    profile=p;
-    const { data:docs, error:de } = await supabase.from('documents').select('*').eq('owner_id',user.id).eq('is_active',true).order('created_at',{ascending:false});
-    if(de){ showLoginError(de.message); return; }
-    documents=docs||[];
-    els.loginView.classList.add('hidden'); els.appView.classList.remove('hidden'); els.documentView.classList.add('hidden'); els.documentListView.classList.remove('hidden');
-    renderList();
-  }
-
-  function showLogin(){ profile=null;documents=[];currentDoc=null; els.appView.classList.add('hidden');els.loginView.classList.remove('hidden'); }
-
-  $('#logoutBtn').addEventListener('click', async()=>{ if(supabase) await supabase.auth.signOut(); showLogin(); });
-  $('#backBtn').addEventListener('click',()=>{ currentDoc=null; signatureData=''; els.documentView.classList.add('hidden'); els.documentListView.classList.remove('hidden'); els.imageResult.classList.add('hidden'); renderList(); });
-  $('#printBtn').addEventListener('click',()=>window.print());
-  $('#imageBtn').addEventListener('click',generateImage);
-
-  function renderList(){
-    const name = lang==='zh' ? (profile.display_name_zh||profile.display_name_ru) : (profile.display_name_ru||profile.display_name_zh);
-    els.helloName.textContent = (lang==='zh'?'您好，':'Здравствуйте, ') + name;
-    els.documentList.innerHTML=''; els.emptyState.classList.toggle('hidden',documents.length>0);
-    documents.forEach(doc=>{
-      const payload=doc.payload||{};
-      const div=document.createElement('article'); div.className='card doc-card';
-      div.innerHTML=`<div class="doc-icon">📄</div><h4>${escapeHtml(lang==='zh'?(doc.title_zh||doc.title_ru):(doc.title_ru||doc.title_zh))}</h4><p>${escapeHtml(payload.summary?.[lang] || typeLabel(doc.type))}</p><div class="doc-meta">${new Date(doc.created_at).toLocaleDateString(lang==='zh'?'zh-CN':'ru-RU')}</div>`;
-      div.addEventListener('click',()=>openDoc(doc)); els.documentList.appendChild(div);
-    });
-  }
-
-  function typeLabel(type){
-    const labels={salary_two_companies:{zh:'工资收条',ru:'Расписка о получении зарплаты'},salary_global:{zh:'工资收条',ru:'Расписка о получении зарплаты'},consulting_receipt:{zh:'服务费收条',ru:'Расписка за консультационные услуги'},application:{zh:'申请书',ru:'Обращение'}};
-    return (labels[type]||{zh:type,ru:type})[lang];
-  }
-
-  function openDoc(doc){ currentDoc=doc; signatureData=''; els.documentListView.classList.add('hidden'); els.documentView.classList.remove('hidden'); els.imageResult.classList.add('hidden'); renderFields(); renderDocument(); window.scrollTo({top:0,behavior:'smooth'}); }
-
-  function renderFields(){
-    const specs = fieldSpecs(currentDoc.type); els.dynamicFields.innerHTML='';
-    specs.forEach(f=>{
-      const label=document.createElement('label'); if(f.full) label.classList.add('full');
-      label.innerHTML=`<span>${escapeHtml(f.label[lang])}</span><input type="${f.inputType||'text'}" data-field="${f.key}" value="${escapeAttr(currentDoc.payload?.fields?.[f.key]||'')}" placeholder="${escapeAttr(f.placeholder?.[lang]||'')}" />`;
-      label.querySelector('input').addEventListener('input',e=>{ currentDoc.payload.fields=currentDoc.payload.fields||{}; currentDoc.payload.fields[f.key]=e.target.value; renderDocument(); });
-      els.dynamicFields.appendChild(label);
-    });
-  }
-
-  function fieldSpecs(type){
-    if(type==='application') return [
-      {key:'applicant_name',label:{zh:'申请人姓名',ru:'ФИО заявителя'},full:true},{key:'registration_date',label:{zh:'注册日期',ru:'Дата регистрации'},inputType:'date'},
-      {key:'partner_id',label:{zh:'会员编号',ru:'ID партнёра'}},{key:'phone',label:{zh:'注册手机号',ru:'Телефон при регистрации'}},
-      {key:'sponsor_name',label:{zh:'推荐人姓名',ru:'ФИО спонсора'},full:true},{key:'sponsor_id',label:{zh:'推荐人会员编号',ru:'ID партнёра спонсора'}},{key:'sponsor_phone',label:{zh:'推荐人手机号',ru:'Телефон спонсора'}},
-      {key:'application_date',label:{zh:'申请日期',ru:'Дата обращения'},inputType:'date'}];
-    return [{key:'period_from',label:{zh:'工作/服务期间：开始',ru:'Период: с'},inputType:'date'},{key:'period_to',label:{zh:'工作/服务期间：结束',ru:'Период: по'},inputType:'date'},{key:'document_date',label:{zh:'文件日期',ru:'Дата документа'},inputType:'date'}];
-  }
-
-  function renderDocument(){
-    if(!currentDoc) return;
-    const p=currentDoc.payload||{}; const f=p.fields||{}; const sig=signatureData?`<img class="sig-image" src="${signatureData}" alt="signature">`:'________________';
-    if(currentDoc.type==='salary_two_companies'){
-      els.documentPaper.innerHTML = bilingualReceipt({
-        ru:[`Я, ${p.person_ru||''}, ${p.passport_ru||''}.`,`Получил(а) денежные средства в общей сумме ${p.amount_ru||''}.`,`Сумма прописью: ${p.amount_words_ru||''}.`,`Деньги выплачены двумя компаниями: ${p.companies_ru||''}.`,`Данная сумма является заработной платой за рабочий период с ${fmt(f.period_from,'ru')} по ${fmt(f.period_to,'ru')}.`,`Претензий по размеру выплаченной заработной платы не имею.`],
-        zh:[`本人 ${p.person_zh||''}，${p.passport_zh||''}。`,`今收到现金总金额：${p.amount_zh||''}。`,`大写：${p.amount_words_zh||''}。`,`款项由两家公司共同发放：${p.companies_zh||''}。`,`该笔资金为 ${fmt(f.period_from,'zh')} 至 ${fmt(f.period_to,'zh')} 工作周期的劳动工资。`,`本人确认足额收到款项，对工资发放金额无任何异议。`],date:f.document_date,sig});
-    } else if(currentDoc.type==='salary_global'){
-      els.documentPaper.innerHTML = bilingualReceipt({ru:[`Я, ${p.person_ru||''}, ${p.passport_ru||''}.`,`Получил(а) денежные средства в общей сумме ${p.amount_ru||''}.`,`Сумма прописью: ${p.amount_words_ru||''}.`,`Данная сумма является заработной платой за рабочий период с ${fmt(f.period_from,'ru')} по ${fmt(f.period_to,'ru')} и выплачена ${p.company_ru||''}.`,`Претензий по размеру выплаченной заработной платы не имею.`],zh:[`本人 ${p.person_zh||''}，${p.passport_zh||''}。`,`今收到现金总金额：${p.amount_zh||''}。`,`大写：${p.amount_words_zh||''}。`,`该笔资金为 ${fmt(f.period_from,'zh')} 至 ${fmt(f.period_to,'zh')} 工作周期的劳动工资，由${p.company_zh||''}发放。`,`本人确认足额收到款项，对工资发放金额无任何异议。`],date:f.document_date,sig});
-    } else if(currentDoc.type==='consulting_receipt'){
-      els.documentPaper.innerHTML = bilingualReceipt({ru:[`Я, ${p.person_ru||''}, ${p.passport_ru||''}.`,`Получил(а) денежные средства в общей сумме ${p.amount_ru||''}.`,`Сумма прописью: ${p.amount_words_ru||''}.`,`Данная сумма получена за оказанные ${p.service_ru||'консультационные услуги'} для ${p.company_ru||''} за период с ${fmt(f.period_from,'ru')} по ${fmt(f.period_to,'ru')}.`,`Претензий по размеру выплаченной суммы не имею.`],zh:[`本人 ${p.person_zh||''}，${p.passport_zh||''}。`,`今收到现金总金额：${p.amount_zh||''}。`,`大写：${p.amount_words_zh||''}。`,`该笔资金是从 ${fmt(f.period_from,'zh')} 至 ${fmt(f.period_to,'zh')} 为${p.company_zh||''}提供的${p.service_zh||'咨询服务费'}。`,`本人确认足额收到款项，对发放的金额无任何异议。`],date:f.document_date,sig,receiver:true});
-    } else if(currentDoc.type==='application'){
-      const applicant=f.applicant_name||'(ФИО заявителя)';
-      els.documentPaper.innerHTML=`<div class="right">Руководителю Корпорации FUTURE BIOTECH (РОССИЯ)<br>господину ${escapeHtml(p.manager_ru||'Ян Сияну')}<br>От ${escapeHtml(applicant)}</div><h1>ОБРАЩЕНИЕ</h1><p>Я, ${escapeHtml(applicant)}, партнер Корпорации FUTURE BIOTECH (РОССИЯ) с ${fmt(f.registration_date,'ru')} г. ID партнёра ${escapeHtml(f.partner_id||'')}, телефон при регистрации ${escapeHtml(f.phone||'')}.</p><p>Прошу ВАС перевести меня вместе со всей моей структурой, с сохранением всех статусов и объемов, в первую линию ${escapeHtml(f.sponsor_name||'')}, ${escapeHtml(f.sponsor_id||'')}, ${escapeHtml(f.sponsor_phone||'')}, списки и «фото-скрин» со спонсорскими объемами моей команды прилагаю.</p><div class="sign-line"><div>Дата обращения: ${fmt(f.application_date,'ru')}</div><div>ФИО: ${escapeHtml(applicant)}<br>Подпись: ${sig}</div></div><hr class="doc-separator"><div class="right">致未来生物科技集团<br>俄罗斯区负责人<br>${escapeHtml(p.manager_zh||'杨希阳先生')}<br>申请人：${escapeHtml(applicant)}</div><h2>申请书</h2><p>本人${escapeHtml(applicant)}，自${fmt(f.registration_date,'zh')}起成为未来生物科技集团（俄罗斯区域）合作经销商，会员编号：${escapeHtml(f.partner_id||'')}，注册预留手机号：${escapeHtml(f.phone||'')}。</p><p>恳请贵公司将本人及全部下属团队架构整体迁移至${escapeHtml(f.sponsor_name||'')}，${escapeHtml(f.sponsor_id||'')}，${escapeHtml(f.sponsor_phone||'')}的一级直推下线，迁移时完整保留本人所有会员的职级与全部销售业绩，随本申请书附上本人团队成员名单及包含团队业绩数据的截图凭证。</p><div class="sign-line"><div>申请日期：${fmt(f.application_date,'zh')}</div><div>申请人：${escapeHtml(applicant)}<br>签字：${sig}</div></div>`;
-    }
-  }
-
-  function bilingualReceipt({ru,zh,date,sig,receiver=false}){
-    return `<h1>Расписка</h1>${ru.map(x=>`<p>${escapeHtml(x)}</p>`).join('')}<div class="sign-line"><div>Дата: ${fmt(date,'ru')}</div><div>${receiver?'Подпись получателя':'Подпись сотрудника'}: ${sig}</div></div><hr class="doc-separator"><h2>收条</h2>${zh.map(x=>`<p>${escapeHtml(x)}</p>`).join('')}<div class="sign-line"><div>日期：${fmt(date,'zh')}</div><div>${receiver?'收款人签字':'员工签字'}：${sig}</div></div>`;
-  }
-
-  function fmt(value,l){ if(!value) return '____'; const d=new Date(value+'T00:00:00'); return l==='zh'?`${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`:d.toLocaleDateString('ru-RU'); }
-  function escapeHtml(s=''){ return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
-  function escapeAttr(s=''){ return escapeHtml(s); }
-
-  // Signature pad
-  const canvas=els.signaturePad, ctx=canvas.getContext('2d'); ctx.lineWidth=3; ctx.lineCap='round'; ctx.strokeStyle='#164e9b'; let drawing=false;
-  function pos(e){ const r=canvas.getBoundingClientRect(); const p=e.touches?e.touches[0]:e; return {x:(p.clientX-r.left)*(canvas.width/r.width), y:(p.clientY-r.top)*(canvas.height/r.height)}; }
-  function start(e){drawing=true; const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()}
-  function move(e){if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault()}
-  function end(){if(!drawing)return;drawing=false;signatureData=canvas.toDataURL('image/png');renderDocument()}
-  canvas.addEventListener('mousedown',start);canvas.addEventListener('mousemove',move);window.addEventListener('mouseup',end);canvas.addEventListener('touchstart',start,{passive:false});canvas.addEventListener('touchmove',move,{passive:false});canvas.addEventListener('touchend',end);
-  $('#clearSignatureBtn').addEventListener('click',()=>{ctx.clearRect(0,0,canvas.width,canvas.height);signatureData='';renderDocument()});
-
-  async function generateImage(){
-    renderDocument();
-    const out = await html2canvas(els.documentPaper,{scale:2,backgroundColor:'#ffffff',useCORS:true});
-    const url=out.toDataURL('image/png'); els.generatedImage.src=url; els.downloadImage.href=url; els.imageResult.classList.remove('hidden'); els.imageResult.scrollIntoView({behavior:'smooth',block:'start'});
-  }
-
-  async function init(){ setLang(lang); if(!configured) return; const {data:{session}}=await supabase.auth.getSession(); if(session) await bootAuthenticated(); }
-  init();
+  let lang=localStorage.getItem('fb_lang')||'zh',profile=null,documents=[],currentDoc=null;
+  let signatures={ru:'',zh:''},draftSignature='', signing=false;
+  const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+  const els={loginView:$('#loginView'),appView:$('#appView'),loginForm:$('#loginForm'),loginId:$('#loginId'),password:$('#password'),loginError:$('#loginError'),helloName:$('#helloName'),documentList:$('#documentList'),emptyState:$('#emptyState'),documentListView:$('#documentListView'),documentView:$('#documentView'),documentPaper:$('#documentPaper'),finalPaper:$('#finalPaper'),finalPreviewSection:$('#finalPreviewSection'),dynamicFields:$('#dynamicFields'),signSection:$('#signSection'),signaturePad:$('#signaturePad'),imageResult:$('#imageResult'),generatedImage:$('#generatedImage'),downloadImage:$('#downloadImage'),printRoot:$('#printRoot'),currentLanguageLabel:$('#currentLanguageLabel'),signatureLanguageNote:$('#signatureLanguageNote')};
+  function t(k){return I18N[lang][k]||k}
+  function setLang(next){lang=next;localStorage.setItem('fb_lang',lang);document.documentElement.lang=lang==='zh'?'zh-CN':'ru';$$('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));$$('.lang-btn').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang)); if(currentDoc){renderFields();renderSingle();updateLanguageLabels()}else if(profile)renderList()}
+  $$('.lang-btn').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.lang)));$('#switchLangBtn').addEventListener('click',()=>setLang(lang==='zh'?'ru':'zh'));
+  els.loginForm.addEventListener('submit',async e=>{e.preventDefault();els.loginError.classList.add('hidden');if(!configured)return showLoginError(t('notConfigured'));const id=els.loginId.value.trim().toUpperCase();const email=`${id.toLowerCase()}@${cfg.LOGIN_EMAIL_DOMAIN||'futurebiotech.local'}`;const {error}=await supabase.auth.signInWithPassword({email,password:els.password.value});if(error)return showLoginError(t('badLogin'));await bootAuthenticated()});
+  function showLoginError(m){els.loginError.textContent=m;els.loginError.classList.remove('hidden')}
+  async function bootAuthenticated(){const {data:{user}}=await supabase.auth.getUser();if(!user)return showLogin();const {data:p,error:pe}=await supabase.from('profiles').select('id,employee_code,display_name_ru,display_name_zh').eq('id',user.id).single();if(pe||!p){await supabase.auth.signOut();return showLoginError('Profile not found')}profile=p;const {data:docs,error:de}=await supabase.from('documents').select('*').eq('owner_id',user.id).eq('is_active',true).order('created_at',{ascending:false});if(de)return showLoginError(de.message);documents=docs||[];els.loginView.classList.add('hidden');els.appView.classList.remove('hidden');els.documentView.classList.add('hidden');els.documentListView.classList.remove('hidden');renderList()}
+  function showLogin(){profile=null;documents=[];currentDoc=null;els.appView.classList.add('hidden');els.loginView.classList.remove('hidden')}
+  $('#logoutBtn').addEventListener('click',async()=>{if(supabase)await supabase.auth.signOut();showLogin()});$('#backBtn').addEventListener('click',()=>{currentDoc=null;signatures={ru:'',zh:''};draftSignature='';signing=false;els.documentView.classList.add('hidden');els.documentListView.classList.remove('hidden');els.imageResult.classList.add('hidden');els.finalPreviewSection.classList.add('hidden');renderList()});
+  function renderList(){const name=lang==='zh'?(profile.display_name_zh||profile.display_name_ru):(profile.display_name_ru||profile.display_name_zh);els.helloName.textContent=(lang==='zh'?'您好，':'Здравствуйте, ')+name;els.documentList.innerHTML='';els.emptyState.classList.toggle('hidden',documents.length>0);documents.forEach(doc=>{const p=doc.payload||{},div=document.createElement('article');div.className='card doc-card';div.innerHTML=`<div class="doc-icon">📄</div><h4>${eh(lang==='zh'?(doc.title_zh||doc.title_ru):(doc.title_ru||doc.title_zh))}</h4><p>${eh(p.summary?.[lang]||typeLabel(doc.type))}</p><div class="doc-meta">${new Date(doc.created_at).toLocaleDateString(lang==='zh'?'zh-CN':'ru-RU')}</div>`;div.addEventListener('click',()=>openDoc(doc));els.documentList.appendChild(div)})}
+  function typeLabel(type){const x={salary_two_companies:{zh:'工资收条',ru:'Расписка о получении зарплаты'},salary_global:{zh:'工资收条',ru:'Расписка о получении зарплаты'},consulting_receipt:{zh:'服务费收条',ru:'Расписка за консультационные услуги'},application:{zh:'申请书',ru:'Обращение'}};return(x[type]||{zh:type,ru:type})[lang]}
+  function openDoc(doc){currentDoc=JSON.parse(JSON.stringify(doc));currentDoc.payload=currentDoc.payload||{};currentDoc.payload.fields=currentDoc.payload.fields||{};signatures={ru:'',zh:''};draftSignature='';signing=false;els.documentListView.classList.add('hidden');els.documentView.classList.remove('hidden');els.finalPreviewSection.classList.add('hidden');els.imageResult.classList.add('hidden');els.signSection.classList.add('hidden');renderFields();renderSingle();updateLanguageLabels();clearCanvas();window.scrollTo({top:0,behavior:'smooth'})}
+  function updateLanguageLabels(){els.currentLanguageLabel.textContent=lang==='ru'?'Русская версия':'中文版';els.signatureLanguageNote.textContent=lang==='ru'?'Подпись будет добавлена только в русскую версию.':'此签字只会显示在中文版，不会复制到俄文版。'}
+  function fieldSpecs(type){if(type==='application')return[{key:'applicant_name',label:{zh:'申请人姓名',ru:'ФИО заявителя'},full:true},{key:'registration_date',label:{zh:'注册日期',ru:'Дата регистрации'},inputType:'date'},{key:'partner_id',label:{zh:'会员编号',ru:'ID партнёра'}},{key:'phone',label:{zh:'注册手机号',ru:'Телефон при регистрации'}},{key:'sponsor_name',label:{zh:'推荐人姓名',ru:'ФИО спонсора'},full:true},{key:'sponsor_id',label:{zh:'推荐人会员编号',ru:'ID партнёра спонсора'}},{key:'sponsor_phone',label:{zh:'推荐人手机号',ru:'Телефон спонсора'}},{key:'application_date',label:{zh:'申请日期',ru:'Дата обращения'},inputType:'date'}];return[{key:'period_from',label:{zh:'工作/服务期间：开始',ru:'Период: с'},inputType:'date'},{key:'period_to',label:{zh:'工作/服务期间：结束',ru:'Период: по'},inputType:'date'},{key:'document_date',label:{zh:'文件日期',ru:'Дата документа'},inputType:'date'}]}
+  function renderFields(){const specs=fieldSpecs(currentDoc.type);els.dynamicFields.innerHTML='';specs.forEach(f=>{const l=document.createElement('label');if(f.full)l.classList.add('full');l.innerHTML=`<span>${eh(f.label[lang])}</span><input type="${f.inputType||'text'}" data-field="${f.key}" value="${ea(currentDoc.payload.fields[f.key]||'')}" />`;l.querySelector('input').addEventListener('input',e=>{currentDoc.payload.fields[f.key]=e.target.value;renderSingle();if(!els.finalPreviewSection.classList.contains('hidden'))renderFinal()});els.dynamicFields.appendChild(l)})}
+  function renderSingle(){els.documentPaper.innerHTML=renderVersion(lang,true)}
+  function renderFinal(){els.finalPaper.innerHTML=`<div class="bilingual-grid"><section class="lang-column">${renderVersion('ru',false)}</section><section class="lang-column">${renderVersion('zh',false)}</section></div>`}
+  function renderVersion(l,single){const type=currentDoc.type,p=currentDoc.payload||{},f=p.fields||{},sig=signatures[l]?`<img class="sig-image" src="${signatures[l]}" alt="signature">`:`<span class="unsigned"></span>`;if(type==='application')return renderApplication(l,f,sig);const rows=receiptRows(type,l,p,f);const title=l==='ru'?'Расписка':'收条';const date=l==='ru'?`Дата: ${fmt(f.document_date,'ru')}`:`日期：${fmt(f.document_date,'zh')}`;const slabel=l==='ru'?(type==='consulting_receipt'?'Подпись получателя:':'Подпись сотрудника:'):(type==='consulting_receipt'?'收款人签字：':'员工签字：');return `<h1>${title}</h1>${rows.map(x=>`<p>${x}</p>`).join('')}<div class="sign-row"><div>${date}</div><div>${slabel} ${sig}${!signatures[l]?`<div class="translation-note">${l==='ru'?'Версия отдельно не подписана':'本语言版本未单独签署'}</div>`:''}</div></div>`}
+  function receiptRows(type,l,p,f){if(type==='salary_two_companies'){return l==='ru'?[`Я, ${p.person_ru||'Моряхина Анна Владимировна'}, ${p.passport_ru||'паспорт серия 4023 № 750154, выдан ГУ МВД РОССИИ ПО Г. САНКТ-ПЕТЕРБУРГУ И ЛЕНИНГРАДСКОЙ ОБЛАСТИ'}.`,`Получила денежные средства в общей сумме ${p.amount_ru||'100000 рублей'}.`,`Сумма прописью: ${p.amount_words_ru||'Сто тысяч рублей'}.`,`Деньги выплачены двумя компаниями:`,` ${p.companies_ru||'ООО «Будущее здоровья рус» и ООО «Будущее здоровья рус трейдинг»'}.`,`Данная сумма является заработной платой за рабочий период с ${fmt(f.period_from,'ru')} по ${fmt(f.period_to,'ru')}.`,`Претензий по размеру выплаченной заработной платы не имею.`]:[`本人 ${p.person_zh||'莫里亚希娜·安娜·弗拉基米罗夫娜'}，${p.passport_zh||'护照：系列 4023，编号 750154，签发机关：俄罗斯联邦内务部圣彼得堡市和列宁格勒州总局'}。`,`今收到现金总金额：${p.amount_zh||'100000卢布'}。`,`大写：${p.amount_words_zh||'十万卢布'}。`,`款项由两家公司共同发放：`,` ${p.companies_zh||'俄罗斯未来健康有限公司、俄罗斯未来健康贸易有限公司'}。`,`该笔资金为 ${fmt(f.period_from,'zh')} 至 ${fmt(f.period_to,'zh')} 工作周期的劳动工资。`,`本人确认足额收到款项，对工资发放金额无任何异议。`]}
+    if(type==='salary_global'){return l==='ru'?[`Я, ${p.person_ru||'Моряхина Анна Владимировна'}, ${p.passport_ru||'паспорт серия 4023 № 750154, выдан ГУ МВД РОССИИ ПО Г. САНКТ-ПЕТЕРБУРГУ И ЛЕНИНГРАДСКОЙ ОБЛАСТИ'}.`,`Получила денежные средства в общей сумме ${p.amount_ru||'50000 рублей'}.`,`Сумма прописью: ${p.amount_words_ru||'Пятьдесят тысяч рублей'}.`,`Данная сумма является заработной платой за рабочий период с ${fmt(f.period_from,'ru')} по ${fmt(f.period_to,'ru')} и выплачена ${p.company_ru||'ООО «ЗДОРОВОЕ БУДУЩЕЕ ГЛОБАЛ»'}.`,`Претензий по размеру выплаченной заработной платы не имею.`]:[`本人 ${p.person_zh||'莫里亚希娜·安娜·弗拉基米罗夫娜'}，${p.passport_zh||'护照：系列 4023，编号 750154，签发机关：俄罗斯联邦内务部圣彼得堡市和列宁格勒州总局'}。`,`今收到现金总金额：${p.amount_zh||'50000卢布'}。`,`大写：${p.amount_words_zh||'五万卢布'}。`,`该笔资金为 ${fmt(f.period_from,'zh')} 至 ${fmt(f.period_to,'zh')} 工作周期的劳动工资，由${p.company_zh||'环球健康未来有限公司'}发放。`,`本人确认足额收到款项，对工资发放金额无任何异议。`]}
+    return l==='ru'?[`Я, ${p.person_ru||'Якушкин Алексей Владимирович'}, ${p.passport_ru||'паспорт серия 4023 № 720764, выдан ГУ МВД России по г. Санкт-Петербургу и Ленинградской области'}.`,`Получил денежные средства в общей сумме ${p.amount_ru||'40 000 рублей'}.`,`Сумма прописью: ${p.amount_words_ru||'Сорок тысяч рублей'}.`,`Данная сумма получена за оказанные юридические консультационные услуги для ${p.company_ru||'ООО «Здоровое будущее глобал»'} за период с «${fmt(f.period_from,'ru')}» по «${fmt(f.period_to,'ru')}».`,`Претензий по размеру выплаченной суммы не имею.`]:[`本人 ${p.person_zh||'亚库什金·阿列克谢·弗拉基米罗维奇'}，${p.passport_zh||'护照：系列 4023，编号 720764，签发机关：俄罗斯联邦内务部圣彼得堡市和列宁格勒州总局'}。`,`今收到现金总金额：${p.amount_zh||'40000卢布'}。`,`大写：${p.amount_words_zh||'四万卢布'}。`,`该笔资金是从 ${fmt(f.period_from,'zh')} 至 ${fmt(f.period_to,'zh')} 为${p.company_zh||'《环球健康未来》有限公司'}提供的法律咨询服务费。`,`本人确认足额收到款项，对发放的金额无任何异议。`]}
+  function renderApplication(l,f,sig){if(l==='ru')return `<div class="application-head">Руководителю Корпорации FUTURE BIOTECH (РОССИЯ)<br>господину Ян Сияну<br><br>От <span class="fill">${eh(f.applicant_name||'(ФИО заявителя)')}</span></div><div class="application-title">ОБРАЩЕНИЕ</div><p>Я, <span class="fill">${eh(f.applicant_name||'(ФИО заявителя)')}</span>, партнер Корпорации FUTURE BIOTECH (РОССИЯ) с <span class="fill">${fmt(f.registration_date,'ru')}</span> г. ID партнёра <span class="fill">${eh(f.partner_id||'(ID партнёра)')}</span>, телефон при регистрации <span class="fill">${eh(f.phone||'(Номер телефона)')}</span>.</p><p>Прошу ВАС перевести меня вместе со всей моей структурой, с сохранением всех статусов и объемов, в первую линию <span class="fill">${eh(f.sponsor_name||'(ФИО спонсора)')}</span>, <span class="fill">${eh(f.sponsor_id||'(ID партнёра спонсора)')}</span>, <span class="fill">${eh(f.sponsor_phone||'(Номер телефона спонсора)')}</span>, списки и «фото-скрин» со спонсорскими объемами моей команды прилагаю.</p><p>Дата обращения: <span class="fill">${fmt(f.application_date,'ru')}</span></p><p>ФИО: <span class="fill">${eh(f.applicant_name||'')}</span></p><p>Подпись: ${sig}</p>${!signatures.ru?'<div class="translation-note">Русская версия отдельно не подписана</div>':''}`;return `<div class="application-head">致未来生物科技集团<br>俄罗斯区负责人<br>杨希阳先生<br><br>申请人：<span class="fill">${eh(f.applicant_name||'(申请人姓名)')}</span></div><div class="application-title">申请书</div><p>本人<span class="fill">${eh(f.applicant_name||'(申请人姓名)')}</span>，自<span class="fill">${fmt(f.registration_date,'zh')}</span>起成为未来生物科技集团（俄罗斯区域）合作经销商，会员编号：<span class="fill">${eh(f.partner_id||'(会员编号)')}</span>，注册预留手机号：<span class="fill">${eh(f.phone||'(手机号码)')}</span>。</p><p>恳请贵公司将本人及全部下属团队架构整体迁移至<span class="fill">${eh(f.sponsor_name||'(推荐人姓名)')}</span>，<span class="fill">${eh(f.sponsor_id||'(推荐人会员编号)')}</span>，<span class="fill">${eh(f.sponsor_phone||'(推荐人手机号)')}</span>的一级直推下线，迁移时完整保留本人所有会员的职级与全部销售业绩，随本申请书附上本人团队成员名单及包含团队业绩数据的截图凭证。</p><p>申请日期：<span class="fill">${fmt(f.application_date,'zh')}</span></p><p>申请人：<span class="fill">${eh(f.applicant_name||'')}</span></p><p>签字：${sig}</p>${!signatures.zh?'<div class="translation-note">中文版未单独签署</div>':''}`}
+  $('#signModeBtn').addEventListener('click',()=>{signing=true;draftSignature='';clearCanvas();els.signSection.classList.remove('hidden');els.signSection.scrollIntoView({behavior:'smooth',block:'center'})});$('#cancelSignBtn').addEventListener('click',()=>{signing=false;draftSignature='';clearCanvas();els.signSection.classList.add('hidden')});$('#confirmSignatureBtn').addEventListener('click',()=>{if(!draftSignature){alert(lang==='ru'?'Сначала поставьте подпись.':'请先签字。');return}signatures[lang]=draftSignature;signing=false;els.signSection.classList.add('hidden');renderSingle();renderFinal();els.finalPreviewSection.classList.remove('hidden');els.finalPreviewSection.scrollIntoView({behavior:'smooth',block:'start'})});
+  $('#printBtn').addEventListener('click',printFinal);$('#finalPrintBtn').addEventListener('click',printFinal);function printFinal(){renderFinal();els.printRoot.innerHTML=`<div class="paper final-paper">${els.finalPaper.innerHTML}</div>`;window.print()}
+  $('#finalImageBtn').addEventListener('click',generateImage);async function generateImage(){renderFinal();const out=await html2canvas(els.finalPaper,{scale:2,backgroundColor:'#fff',useCORS:true});const url=out.toDataURL('image/png');els.generatedImage.src=url;els.downloadImage.href=url;els.imageResult.classList.remove('hidden');els.imageResult.scrollIntoView({behavior:'smooth',block:'start'})}
+  const canvas=els.signaturePad,ctx=canvas.getContext('2d');ctx.strokeStyle='#1d4ed8';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round';let drawing=false;function pos(e){const r=canvas.getBoundingClientRect(),q=e.touches?e.touches[0]:e;return{x:(q.clientX-r.left)*(canvas.width/r.width),y:(q.clientY-r.top)*(canvas.height/r.height)}}function start(e){drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()}function move(e){if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault()}function end(){if(!drawing)return;drawing=false;draftSignature=canvas.toDataURL('image/png')}function clearCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height);draftSignature=''}canvas.addEventListener('mousedown',start);canvas.addEventListener('mousemove',move);window.addEventListener('mouseup',end);canvas.addEventListener('touchstart',start,{passive:false});canvas.addEventListener('touchmove',move,{passive:false});canvas.addEventListener('touchend',end);$('#clearSignatureBtn').addEventListener('click',clearCanvas);
+  function fmt(v,l){if(!v)return l==='ru'?'____________':'____年__月__日';const d=new Date(v+'T00:00:00');if(Number.isNaN(d.getTime()))return eh(v);return l==='ru'?d.toLocaleDateString('ru-RU'):d.toLocaleDateString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit'})}function eh(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}function ea(v){return eh(v)}
+  async function init(){setLang(lang);if(!configured)return;const {data:{session}}=await supabase.auth.getSession();if(session)await bootAuthenticated()}init();
 })();
