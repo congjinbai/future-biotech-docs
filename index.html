@@ -187,4 +187,90 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
+
+<script>
+// V13: wait on the registration screen and enter the system automatically after admin approval.
+(() => {
+  const SUPABASE_URL = 'https://fhavhcgptccvidbupdmv.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_0latpE-eCFd5WkuGQiRcFw_C6XBinoc';
+  if (!window.supabase?.createClient) return;
+  const approvalClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  });
+  const successEl = document.getElementById('registerSuccess');
+  if (!successEl) return;
+
+  let timer = null;
+  let lastApproved = false;
+
+  function currentUiLang(){
+    const htmlLang=(document.documentElement.lang||'').toLowerCase();
+    if(htmlLang.startsWith('ru')) return 'ru';
+    try { if(localStorage.getItem('futureHealthLang')==='ru') return 'ru'; } catch(e){}
+    return 'zh';
+  }
+
+  function notifyApproved(){
+    if(lastApproved) return;
+    lastApproved = true;
+    const ru=currentUiLang()==='ru';
+    successEl.textContent = ru
+      ? 'Регистрация подтверждена. Вход в систему…'
+      : '注册已通过，正在进入系统……';
+    successEl.classList.remove('hidden');
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;
+      const ac=new AC();
+      const now=ac.currentTime;
+      [0,0.18].forEach((d,i)=>{
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.type='sine'; o.frequency.value=i?880:740;
+        g.gain.setValueAtTime(0.0001,now+d);
+        g.gain.exponentialRampToValueAtTime(0.16,now+d+0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001,now+d+0.14);
+        o.connect(g); g.connect(ac.destination); o.start(now+d); o.stop(now+d+0.16);
+      });
+      setTimeout(()=>ac.close().catch(()=>{}),700);
+    }catch(e){}
+    if('Notification' in window && Notification.permission==='granted'){
+      try{ new Notification('FUTURE HEALTH',{body:ru?'Регистрация подтверждена.':'注册已通过。'}); }catch(e){}
+    }
+    setTimeout(()=>{
+      try{ document.getElementById('registerDialog')?.close(); }catch(e){}
+      location.reload();
+    },900);
+  }
+
+  async function checkApproval(){
+    try{
+      const {data:{session}}=await approvalClient.auth.getSession();
+      if(!session?.user?.id) return;
+      const {data,error}=await approvalClient.from('profiles')
+        .select('registration_approved')
+        .eq('id',session.user.id)
+        .maybeSingle();
+      if(!error && data?.registration_approved===true) notifyApproved();
+    }catch(e){}
+  }
+
+  function startWaiting(){
+    if(timer) return;
+    checkApproval();
+    timer=setInterval(checkApproval,4000);
+  }
+  function stopWaiting(){ if(timer){clearInterval(timer);timer=null;} }
+
+  const observer=new MutationObserver(()=>{
+    const visible=!successEl.classList.contains('hidden') && successEl.textContent.trim();
+    if(visible) startWaiting(); else stopWaiting();
+  });
+  observer.observe(successEl,{attributes:true,childList:true,subtree:true,characterData:true});
+
+  // Also covers a page restored from bfcache while the approval screen is still visible.
+  window.addEventListener('pageshow',()=>{
+    if(!successEl.classList.contains('hidden') && successEl.textContent.trim()) startWaiting();
+  });
+})();
+</script>
+
 </body></html>

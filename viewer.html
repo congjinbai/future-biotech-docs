@@ -1,6 +1,6 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FUTURE HEALTH</title>
 <style>
-*{box-sizing:border-box}body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eef2f7;margin:0;color:#17324d}.status-box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08);text-align:center}.err{color:#b42318}.viewer-shell{width:100%;max-width:760px;margin:0 auto;padding:10px 0 32px}.viewer-frame{display:block;width:100%;border:0;background:transparent;min-height:420px}.system-footer{width:calc(100% - 24px);max-width:680px;margin:18px auto 34px;text-align:center;position:relative;z-index:99999}.system-back{display:block;width:100%;text-decoration:none;border:0;border-radius:16px;padding:13px 22px;background:#0b4f86;color:#fff;font-weight:750;font-size:15px;box-shadow:0 4px 14px rgba(11,79,134,.18)}@media(max-width:720px){.viewer-shell{padding-top:0}.system-footer{margin-top:14px}}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eef2f7;margin:0;color:#17324d}.status-box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08);text-align:center}.err{color:#b42318}.viewer-shell{width:100%;max-width:760px;margin:0 auto;padding:10px 0 14px}.viewer-frame{display:block;width:100%;border:0;background:transparent;min-height:420px}.system-footer{width:calc(100% - 24px);max-width:680px;margin:6px auto 18px;text-align:center;position:relative;z-index:99999}.system-back{display:block;width:100%;text-decoration:none;border:0;border-radius:16px;padding:13px 22px;background:#0b4f86;color:#fff;font-weight:750;font-size:15px;box-shadow:0 4px 14px rgba(11,79,134,.18)}@media(max-width:720px){.viewer-shell{padding-top:0}.system-footer{margin-top:6px;margin-bottom:14px}}
 </style></head>
 <body>
 <div class="status-box" id="status"></div>
@@ -34,7 +34,7 @@
  const context={profile:profile||{},payload:data.payload||{},document_id:id,admin_readonly:adminMode};
  let html=data.source_html;
  const ctxScript=`<script>window.FH_DOC_CONTEXT=${JSON.stringify(context).replace(/</g,'\\u003c')};<\/script>`;
- const injectedStyle=`<style id="fh-system-style">.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:block;max-width:680px;width:calc(100% - 24px);margin:12px auto 8px;text-align:center;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font:700 12px system-ui,-apple-system,sans-serif}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>`;
+ const injectedStyle=`<style id="fh-system-style">.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:block;max-width:680px;width:calc(100% - 24px);margin:12px auto 8px;text-align:center;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font:700 12px system-ui,-apple-system,sans-serif}div[style*="height:96px"][style*="border-bottom"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;border-bottom:1px solid #000;z-index:50;pointer-events:none}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>`;
  const badge=adminMode?`<div class="fh-readonly-badge">${txt.readonly}</div>`:'';
  html=html.replace(/<body([^>]*)>/i,m=>m+ctxScript+injectedStyle+badge);
  const frame=document.getElementById('docFrame'),shell=document.getElementById('viewerShell'),status=document.getElementById('status'),back=document.getElementById('systemBack');
@@ -42,8 +42,20 @@
  frame.srcdoc=html;status.hidden=true;shell.hidden=false;
  function setupFrame(){
    const d=frame.contentDocument,w=frame.contentWindow;if(!d||!w)return;
-   const resize=()=>{try{const h=Math.max(d.documentElement?.scrollHeight||0,d.body?.scrollHeight||0,420);frame.style.height=(h+12)+'px'}catch{}};
-   resize();setTimeout(resize,150);setTimeout(resize,700);setTimeout(resize,1800);
+   const resize=()=>{try{
+     const body=d.body;if(!body)return;
+     let bottom=0;
+     for(const el of Array.from(body.children)){
+       const cs=w.getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden')continue;
+       const r=el.getBoundingClientRect();
+       if(r.left<-1000||r.top<-1000)continue;
+       bottom=Math.max(bottom,r.bottom+w.scrollY);
+     }
+     const bodyStyle=w.getComputedStyle(body),padBottom=parseFloat(bodyStyle.paddingBottom)||0;
+     const h=Math.max(420,Math.ceil(bottom+padBottom+2));
+     if(Math.abs((parseFloat(frame.style.height)||0)-h)>2)frame.style.height=h+'px';
+   }catch{}};
+   resize();setTimeout(resize,120);setTimeout(resize,450);setTimeout(resize,1000);
    try{new ResizeObserver(resize).observe(d.documentElement);new MutationObserver(resize).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true})}catch{}
    const sel=d.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=d.getElementById('languageLabel')||d.getElementById('toolbarLabel');if(lbl)lbl.style.display='none';let btn=d.getElementById('fhLangToggle');if(!btn){btn=d.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文';resize()};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}
    if(adminMode){setTimeout(()=>{d.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.id==='fhLangToggle'||el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true});resize()},180)}
