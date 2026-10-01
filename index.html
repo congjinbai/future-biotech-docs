@@ -71,7 +71,7 @@
           <div><h2 id="usersTitle">账户</h2><p id="usersHint" class="muted">可修改账户名称并重置密码。</p></div>
           <div class="row"><button id="deleteUsersModeBtn" type="button" class="danger">删除账户</button><button id="newUserBtn" type="button" class="primary">＋ 新建账户</button></div>
         </div>
-        <div id="userBulkBar" class="notice hidden" style="margin-bottom:12px"><div class="row" style="justify-content:space-between"><div><span id="userBulkHint">请选择要删除的账户，可单选或多选。</span> <strong id="userBulkCount">0</strong></div><div class="row"><button type="button" id="cancelBulkUsers" class="ghost small">取消</button><button type="button" id="confirmBulkUsers" class="danger small">删除所选</button></div></div></div>
+        <div id="userBulkBar" class="notice hidden" style="margin-bottom:12px"><div class="row" style="justify-content:space-between"><div><span id="userBulkHint">请选择要删除的账户，可单选或多选。</span> <strong id="userBulkCount">0</strong></div><div class="row"><button type="button" id="selectAllBulkUsers" class="ghost small">全选</button><button type="button" id="cancelBulkUsers" class="ghost small">取消</button><button type="button" id="confirmBulkUsers" class="danger small">删除所选</button></div></div></div>
         <div id="userList"></div>
       </section>
 
@@ -95,6 +95,7 @@
   <div id="registerSuccess" class="notice hidden"></div>
   <div id="registrationWaitingControls" class="hidden" style="margin-top:12px">
     <button type="button" id="registrationRefreshBtn" class="primary wide">↻ 更新</button>
+    <button type="button" id="registrationResubmitBtn" class="primary wide hidden" style="margin-top:10px">重新提交审核</button>
     <p id="registrationRefreshHint" class="muted" style="margin:10px 4px 0;line-height:1.55;text-align:center">请点击“更新”检查审核状态。请不要完全退出系统；保持此页面打开，管理员通过审核后可第一时间收到提示并自动进入系统。</p>
   </div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="registerDialog" id="registerCancelBtn">取消</button><button type="button" id="registerConfirmBtn" class="primary">注册</button></div>
@@ -251,8 +252,29 @@
     try{
       const {data:{session}}=await c.auth.getSession();
       if(!session?.user?.id)return;
-      const {data,error}=await c.from('profiles').select('registration_approved').eq('id',session.user.id).maybeSingle();
+      const [{data,error},{data:pendingRow}]=await Promise.all([
+        c.from('profiles').select('registration_approved').eq('id',session.user.id).maybeSingle(),
+        c.from('pending_registrations').select('status,admin_message,phone,full_name,full_name_zh').eq('auth_user_id',session.user.id).maybeSingle()
+      ]);
       if(error)return;
+      if(pendingRow?.status==='needs_correction'){
+        const key='fhCorrectionSeen:'+session.user.id+':'+(pendingRow.admin_message||'');
+        if(sessionStorage.getItem(key)!=='1'){
+          sessionStorage.setItem(key,'1');ding();
+          try{if('Notification'in window&&Notification.permission==='granted')new Notification('FUTURE HEALTH',{body:pendingRow.admin_message||(ru()?'Администратор просит исправить данные регистрации.':'管理员要求修改注册信息。')});}catch(e){}
+        }
+        success.textContent=(ru()?'Администратор просит исправить данные:
+':'管理员提示：
+')+(pendingRow.admin_message||'');success.classList.remove('hidden');
+        const phone=document.getElementById('registerPhone');if(phone&&pendingRow.phone)phone.value=pendingRow.phone;
+        const nru=document.getElementById('registerNameRu'),nzh=document.getElementById('registerNameZh');
+        if(nru&&pendingRow.full_name)nru.value=pendingRow.full_name;
+        if(nzh&&(pendingRow.full_name_zh||pendingRow.full_name))nzh.value=pendingRow.full_name_zh||pendingRow.full_name;
+        document.getElementById('registrationResubmitBtn')?.classList.remove('hidden');
+        document.getElementById('registrationRefreshBtn')?.classList.remove('hidden');
+        return;
+      }
+      document.getElementById('registrationResubmitBtn')?.classList.add('hidden');
       if(data?.registration_approved===true){
         approvedHandled=true;ding();
         const msg=ru()?'Регистрация подтверждена. Вход в систему…':'注册已通过，正在进入系统……';
