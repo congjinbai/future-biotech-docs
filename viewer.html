@@ -5,29 +5,35 @@
 (async()=>{
  const cfg=window.APP_CONFIG,sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
  const uiLang=(localStorage.getItem('fh_ui_lang')||localStorage.getItem('fb_ui_lang')||'zh')==='ru'?'ru':'zh';
- const txt=uiLang==='zh'?{opening:'正在验证权限并打开文件…',missing:'缺少文件编号。',denied:'没有权限查看此文件，或文件不存在。',nosource:'该文件尚未导入原始源代码。',backAdmin:'返回',backUser:'返回',readonly:'管理员只读查看',bottomUser:'退出文件，返回文件列表'}:{opening:'Проверка доступа и открытие документа…',missing:'Не указан номер документа.',denied:'Нет доступа к документу или документ не существует.',nosource:'Исходный код этого документа ещё не загружен.',backAdmin:'Назад',backUser:'Назад',readonly:'Просмотр администратора: только чтение',bottomUser:'Выйти из документа и вернуться к списку'};
+ const txt=uiLang==='zh'?{opening:'正在验证权限并打开文件…',missing:'缺少文件编号。',denied:'没有权限查看此文件，或文件不存在。',nosource:'该文件尚未导入原始源代码。',backAdmin:'返回',readonly:'管理员只读查看',bottomUser:'退出文件，返回文件列表'}:{opening:'Проверка доступа и открытие документа…',missing:'Не указан номер документа.',denied:'Нет доступа к документу или документ не существует.',nosource:'Исходный код этого документа ещё не загружен.',backAdmin:'Назад',readonly:'Просмотр администратора: только чтение',bottomUser:'Выйти из документа и вернуться к списку'};
  document.documentElement.lang=uiLang==='zh'?'zh-CN':'ru';document.getElementById('status').textContent=txt.opening;
  const qs=new URLSearchParams(location.search),id=qs.get('id'),requestedAdmin=qs.get('mode')==='admin';
- const {data:{session}}=await sb.auth.getSession(); if(!session){location.replace('./');return}
+ const {data:{session}}=await sb.auth.getSession();if(!session){location.replace('./');return}
  if(!id){document.getElementById('status').innerHTML='<span class="err">'+txt.missing+'</span>';return}
  let adminMode=false;
  if(requestedAdmin){const {data:p}=await sb.from('profiles').select('is_admin').eq('id',session.user.id).single();adminMode=!!p?.is_admin}
- const {data,error}=await sb.from('documents').select('id,source_html,title_ru,title_zh').eq('id',id).single();
+ const {data,error}=await sb.from('documents').select('id,source_html,title_ru,title_zh,payload').eq('id',id).single();
  if(error||!data){document.getElementById('status').innerHTML='<span class="err">'+txt.denied+'</span>';return}
  if(!data.source_html){document.getElementById('status').innerHTML='<span class="err">'+txt.nosource+'</span>';return}
+ let profile=null;
+ if(adminMode){
+   const {data:as}=await sb.from('document_assignments').select('user_id').eq('document_id',id).eq('is_active',true);
+   const ids=[...new Set((as||[]).map(x=>x.user_id))];
+   if(ids.length===1){const {data:p}=await sb.from('profiles').select('id,display_name_ru,display_name_zh,employee_code').eq('id',ids[0]).single();profile=p||null}
+   if(!profile)profile={display_name_ru:'[ФИО пользователя]',display_name_zh:'[用户名]',employee_code:''};
+ }else{
+   const {data:p}=await sb.from('profiles').select('id,display_name_ru,display_name_zh,employee_code').eq('id',session.user.id).single();profile=p||null;
+ }
+ const context={profile:profile||{},payload:data.payload||{},document_id:id,admin_readonly:adminMode};
  const backHref=adminMode?'./index.html#documents':'./index.html';
- const nav=`<style id="fh-system-style">
- .fh-system-strip{max-width:680px;width:calc(100% - 24px);margin:12px auto 0;text-align:center;font-family:system-ui,-apple-system,sans-serif}
- .fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}
- .fh-readonly-badge{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}
- ${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}
- </style>${adminMode?`<div class="fh-system-strip"><span class="fh-readonly-badge">${txt.readonly}</span></div>`:''}`;
+ const nav=`<style id="fh-system-style">.fh-system-strip{max-width:680px;width:calc(100% - 24px);margin:12px auto 0;text-align:center;font-family:system-ui,-apple-system,sans-serif}.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>${adminMode?`<div class="fh-system-strip"><span class="fh-readonly-badge">${txt.readonly}</span></div>`:''}`;
  const bottom=`<div style="max-width:680px;width:calc(100% - 24px);margin:22px auto 34px;text-align:center;font-family:system-ui"><a href="${backHref}" style="display:inline-block;text-decoration:none;border:0;border-radius:999px;padding:12px 24px;background:#0b4f86;color:#fff;font-weight:700;font-size:14px;cursor:pointer">← ${adminMode?txt.backAdmin:txt.bottomUser}</a></div>`;
  let html=data.source_html;
- html=html.replace(/<body([^>]*)>/i,m=>m+nav);
+ const ctxScript=`<script>window.FH_DOC_CONTEXT=${JSON.stringify(context).replace(/</g,'\\u003c')};<\/script>`;
+ html=html.replace(/<body([^>]*)>/i,m=>m+ctxScript+nav);
  html=html.replace(/<\/body>/i,bottom+'</body>');
  document.open();document.write(html);document.close();
  setTimeout(()=>{const sel=document.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=document.getElementById('languageLabel');if(lbl)lbl.style.display='none';let btn=document.getElementById('fhLangToggle');if(!btn){btn=document.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文'};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}},120);
- if(adminMode){setTimeout(()=>{document.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.closest('.fh-system-nav')||el.id==='fhLangToggle')return;if(el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true;});},180)}
+ if(adminMode){setTimeout(()=>{document.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.id==='fhLangToggle'||el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true})},180)}
 })();
 </script></body></html>

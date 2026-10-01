@@ -78,7 +78,8 @@
 
 <dialog id="registerDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="registerTitle">注册</h3><button type="button" class="icon-btn" data-close-dialog="registerDialog">×</button></div>
-  <label><span id="registerNameLabel">姓名</span><input id="registerName" autocomplete="name" placeholder="Иванов Иван Иванович"></label>
+  <label><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" autocomplete="name" placeholder="Иванов Иван Иванович"></label>
+  <label><span id="registerNameZhLabel">中文姓名</span><input id="registerNameZh" autocomplete="name" placeholder="伊万诺夫·伊万·伊万诺维奇"></label>
   <label><span id="registerPhoneLabel">手机号码 / Телефон</span><input id="registerPhone" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="8XXXXXXXXXX"></label>
   <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" minlength="8" autocomplete="new-password"></label>
   <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" minlength="8" autocomplete="new-password"></label>
@@ -122,10 +123,11 @@
 
 <dialog id="templateDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="newTemplateTitle">添加新模板</h3><button type="button" class="icon-btn" data-close-dialog="templateDialog">×</button></div>
-  <label><span id="templateZhLabel">中文标题</span><input id="templateTitleZh" placeholder="新申请书"></label>
-  <label><span id="templateRuLabel">俄文标题</span><input id="templateTitleRu" placeholder="Новое заявление"></label>
-  <label><span id="templateFileLabel">模板源代码</span><input id="templateSourceFile" type="file" accept=".txt,.html,text/plain,text/html"></label>
-  <div id="templateHint" class="muted">新模板保存后可在“新建文件”时选择。</div>
+  <label><span id="templateZhLabel">中文标题</span><input id="templateTitleZh" placeholder="新收条模板"></label>
+  <label><span id="templateRuLabel">俄文标题</span><input id="templateTitleRu" placeholder="Новый шаблон расписки"></label>
+  <label><span id="templateModeLabel">创建方式</span><select id="templateMode"><option value="builder">可视化可编辑模板</option><option value="upload">上传 HTML/TXT 源代码</option></select></label>
+  <label id="templateFileRow" class="hidden"><span id="templateFileLabel">模板源代码</span><input id="templateSourceFile" type="file" accept=".txt,.html,text/plain,text/html"></label>
+  <div id="templateHint" class="muted">推荐使用可视化模板：以后可以直接修改金额、正文和提问问题，不需要改代码。</div>
   <div id="templateCreateError" class="error hidden"></div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="templateDialog" id="templateCancelBtn">取消</button><button type="button" id="createTemplateConfirm" class="primary">添加模板</button></div>
 </div></dialog>
@@ -135,8 +137,36 @@
   <label><span id="selectTemplateLabel">选择模板</span><select id="docTemplate"></select></label>
   <label><span id="docRuTitleLabel">俄文标题</span><input id="docTitleRu"></label>
   <label><span id="docZhTitleLabel">中文标题</span><input id="docTitleZh"></label>
+  <button type="button" id="editDocDraftBtn" class="ghost wide">编辑本文件内容</button>
   <fieldset><legend id="recipientsLegend">发放对象</legend><div class="row"><button type="button" id="selectAllUsers" class="ghost small">全选</button><button type="button" id="clearUsers" class="ghost small">清空</button></div><div id="recipientList" class="check-list"></div></fieldset>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="docDialog" id="docCancelBtn">取消</button><button type="button" id="createDocConfirm" class="primary">创建并发放</button></div>
+</div></dialog>
+
+<dialog id="contentDialog"><div class="dialog-card wide-dialog">
+  <div class="dialog-head"><h3 id="contentDialogTitle">编辑模板内容</h3><button type="button" class="icon-btn" data-close-dialog="contentDialog">×</button></div>
+  <input type="hidden" id="contentTargetKind"><input type="hidden" id="contentTargetId">
+  <div class="notice" id="contentNameNotice">姓名无需写进模板，将自动从接收该文件的用户账户中读取。</div>
+  <div class="form-grid-2">
+    <label><span id="cfgDocTitleRuLabel">文件内俄文标题</span><input id="cfgDocTitleRu"></label>
+    <label><span id="cfgDocTitleZhLabel">文件内中文标题</span><input id="cfgDocTitleZh"></label>
+    <label><span id="cfgPassportSeriesLabel">护照系列</span><input id="cfgPassportSeries"></label>
+    <label><span id="cfgPassportNumberLabel">护照号码</span><input id="cfgPassportNumber"></label>
+  </div>
+  <label><span id="cfgPassportIssuerRuLabel">护照签发机关（俄文）</span><input id="cfgPassportIssuerRu"></label>
+  <label><span id="cfgPassportIssuerZhLabel">护照签发机关（中文）</span><input id="cfgPassportIssuerZh"></label>
+  <div class="form-grid-2">
+    <label><span id="cfgAmountLabel">金额数字</span><input id="cfgAmount"></label>
+    <label><span id="cfgAmountZhLabel">中文金额数字</span><input id="cfgAmountZh"></label>
+    <label><span id="cfgAmountWordsRuLabel">金额大写（俄文）</span><input id="cfgAmountWordsRu"></label>
+    <label><span id="cfgAmountWordsZhLabel">金额大写（中文）</span><input id="cfgAmountWordsZh"></label>
+  </div>
+  <label><span id="cfgParagraphsRuLabel">正文（俄文，每行一个段落）</span><textarea id="cfgParagraphsRu" rows="7"></textarea></label>
+  <label><span id="cfgParagraphsZhLabel">正文（中文，每行一个段落）</span><textarea id="cfgParagraphsZh" rows="7"></textarea></label>
+  <div class="notice" id="cfgTokenHelp">正文中可以使用 {q1}、{q2}……，系统会自动替换为使用者对对应问题的回答。</div>
+  <div class="dialog-head question-head"><h4 id="questionsTitle">填写问题</h4><button type="button" id="addQuestionBtn" class="ghost small">＋ 添加问题</button></div>
+  <div id="questionEditor"></div>
+  <div id="contentError" class="error hidden"></div>
+  <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="contentDialog" id="contentCancelBtn">取消</button><button type="button" id="saveContentBtn" class="primary">保存</button></div>
 </div></dialog>
 
 <dialog id="assignDialog"><div class="dialog-card">
