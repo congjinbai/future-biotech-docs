@@ -45,6 +45,7 @@
         <button type="button" data-tab="templates" class="active" id="tabTemplatesBtn">模板</button>
         <button type="button" data-tab="documents" id="tabDocumentsBtn">文件</button>
         <button type="button" data-tab="users" id="tabUsersBtn">账户</button>
+        <button type="button" data-tab="receipts" id="tabReceiptsBtn">回执<span id="receiptBadge" class="hidden" style="margin-left:5px;background:#d93025;color:#fff;border-radius:999px;padding:1px 6px;font-size:11px;vertical-align:top">0</span></button>
       </nav>
 
       <section id="tab-templates" class="panel admin-tab">
@@ -71,6 +72,11 @@
           <button id="newUserBtn" type="button" class="primary">＋ 新建账户</button>
         </div>
         <div id="userList"></div>
+      </section>
+
+      <section id="tab-receipts" class="panel admin-tab hidden">
+        <div class="section-head"><div><h2 id="receiptsTitle">回执文件夹</h2><p id="receiptsHint" class="muted">用户提交的已签字文件会集中保存在这里。</p></div></div>
+        <div id="receiptInbox"></div>
       </section>
     </section>
   </main>
@@ -308,4 +314,62 @@
 })();
 </script>
 
+
+<script>
+// V15: registration approval alert on the waiting screen + signed receipt inbox.
+(() => {
+  const URL='https://fhavhcgptccvidbupdmv.supabase.co';
+  const KEY='sb_publishable_0latpE-eCFd5WkuGQiRcFw_C6XBinoc';
+  if(!window.supabase?.createClient) return;
+  const c=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  let ac=null,waitTimer=null,lastStatus=null;
+  const ru=()=>((document.documentElement.lang||'').toLowerCase().startsWith('ru')||localStorage.getItem('futureHealthLang')==='ru');
+  function unlockAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!ac)ac=new AC();if(ac.state==='suspended')ac.resume().catch(()=>{});}catch(e){}}
+  function ding(){try{unlockAudio();if(!ac)return;const n=ac.currentTime;[0,.16].forEach((d,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=i?900:760;g.gain.setValueAtTime(.0001,n+d);g.gain.exponentialRampToValueAtTime(.18,n+d+.02);g.gain.exponentialRampToValueAtTime(.0001,n+d+.13);o.connect(g);g.connect(ac.destination);o.start(n+d);o.stop(n+d+.15);});}catch(e){}}
+  async function maybeRequestNotifications(){try{if('Notification'in window&&Notification.permission==='default')await Notification.requestPermission();}catch(e){}}
+  document.getElementById('registerConfirmBtn')?.addEventListener('click',()=>{unlockAudio();maybeRequestNotifications();setTimeout(startWait,500)});
+  document.getElementById('registrationRefreshBtn')?.addEventListener('click',unlockAudio);
+  async function checkSelfApproval(){
+    const success=document.getElementById('registerSuccess');
+    if(!success||success.classList.contains('hidden')) return;
+    try{
+      const {data:{session}}=await c.auth.getSession();
+      if(!session?.user?.id)return;
+      const {data}=await c.from('profiles').select('registration_approved').eq('id',session.user.id).maybeSingle();
+      const approved=data?.registration_approved===true;
+      if(approved&&lastStatus!==true){
+        lastStatus=true;ding();
+        const msg=ru()?'Регистрация подтверждена. Вы входите в систему…':'注册已通过，正在进入系统……';
+        success.textContent=msg;success.classList.remove('hidden');
+        document.getElementById('registrationWaitingControls')?.classList.add('hidden');
+        try{if('Notification'in window&&Notification.permission==='granted')new Notification('FUTURE HEALTH',{body:ru()?'Регистрация подтверждена.':'注册已通过。'});}catch(e){}
+        setTimeout(()=>location.reload(),700);
+      }
+    }catch(e){}
+  }
+  function startWait(){if(waitTimer)return;checkSelfApproval();waitTimer=setInterval(checkSelfApproval,2000)}
+  new MutationObserver(()=>{const s=document.getElementById('registerSuccess');if(s&&!s.classList.contains('hidden')&&s.textContent.trim())startWait();}).observe(document.body,{subtree:true,childList:true,attributes:true});
+  window.addEventListener('pageshow',startWait);
+
+  // Admin receipt inbox. It is independent from the legacy app.js tab logic.
+  const btn=document.getElementById('tabReceiptsBtn'),panel=document.getElementById('tab-receipts'),box=document.getElementById('receiptInbox'),badge=document.getElementById('receiptBadge');
+  function setInboxLang(){if(!btn)return;btn.childNodes[0].nodeValue=ru()?'Расписки':'回执';document.getElementById('receiptsTitle').textContent=ru()?'Папка расписок':'回执文件夹';document.getElementById('receiptsHint').textContent=ru()?'Подписанные файлы пользователей сохраняются здесь.':'用户提交的已签字文件会集中保存在这里。';}
+  async function loadInbox(){
+    if(!box)return;
+    const {data:{session}}=await c.auth.getSession();if(!session)return;
+    const {data:me}=await c.from('profiles').select('is_admin').eq('id',session.user.id).maybeSingle();if(!me?.is_admin)return;
+    const {data:rows}=await c.from('signed_receipts').select('id,document_id,user_id,storage_path,file_name,created_at,read_at').order('created_at',{ascending:false});
+    const list=rows||[];const unread=list.filter(x=>!x.read_at).length;
+    if(badge){badge.textContent=String(unread);badge.classList.toggle('hidden',!unread)}
+    if(!list.length){box.innerHTML='<div class="empty">'+(ru()?'Полученных расписок пока нет.':'暂时没有收到回执。')+'</div>';return;}
+    const uids=[...new Set(list.map(x=>x.user_id))],dids=[...new Set(list.map(x=>x.document_id))];
+    const [{data:us},{data:ds}]=await Promise.all([c.from('profiles').select('id,display_name_ru,display_name_zh,employee_code').in('id',uids),c.from('documents').select('id,title_ru,title_zh').in('id',dids)]);
+    const um=Object.fromEntries((us||[]).map(x=>[x.id,x])),dm=Object.fromEntries((ds||[]).map(x=>[x.id,x]));
+    box.innerHTML=list.map(x=>{const u=um[x.user_id]||{},d=dm[x.document_id]||{};const name=ru()?(u.display_name_ru||u.display_name_zh||u.employee_code):(u.display_name_zh||u.display_name_ru||u.employee_code);const title=ru()?(d.title_ru||d.title_zh||'Документ'):(d.title_zh||d.title_ru||'文件');const when=new Date(x.created_at).toLocaleString(ru()?'ru-RU':'zh-CN');return `<div class="doc-row" data-rid="${x.id}" style="padding:14px 0;border-bottom:1px solid #e5eaf0"><div style="font-weight:700">${name||''}</div><div>${title}</div><div class="muted" style="font-size:12px;margin:4px 0 8px">${when}</div><div class="row"><button type="button" class="ghost small receipt-view" data-path="${x.storage_path}">${ru()?'Просмотр':'查看'}</button><button type="button" class="ghost small receipt-download" data-path="${x.storage_path}" data-name="${x.file_name}">${ru()?'Скачать':'下载'}</button><button type="button" class="ghost small receipt-share" data-path="${x.storage_path}" data-name="${x.file_name}">${ru()?'Поделиться':'转发'}</button></div></div>`}).join('');
+    box.querySelectorAll('[data-path]').forEach(b=>b.onclick=async()=>{const path=b.dataset.path,name=b.dataset.name||'receipt.png';const {data:blob,error}=await c.storage.from('signed-receipts').download(path);if(error||!blob)return alert(ru()?'Не удалось загрузить файл.':'文件读取失败。');await c.from('signed_receipts').update({read_at:new Date().toISOString()}).eq('id',b.closest('[data-rid]').dataset.rid);if(b.classList.contains('receipt-view')){const url=URL.createObjectURL(blob);window.open(url,'_blank');setTimeout(()=>URL.revokeObjectURL(url),120000);}else if(b.classList.contains('receipt-share')&&navigator.share){const f=new File([blob],name,{type:blob.type||'image/png'});try{await navigator.share({files:[f],title:name})}catch(e){}}else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),60000);}loadInbox();});
+  }
+  if(btn){btn.addEventListener('click',()=>{document.querySelectorAll('.admin-tab').forEach(x=>x.classList.add('hidden'));document.querySelectorAll('.admin-tabs button').forEach(x=>x.classList.remove('active'));panel.classList.remove('hidden');btn.classList.add('active');loadInbox();});}
+  setInboxLang();setInterval(loadInbox,15000);setTimeout(loadInbox,1200);
+})();
+</script>
 </body></html>

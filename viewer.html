@@ -58,6 +58,29 @@
    resize();setTimeout(resize,120);setTimeout(resize,450);setTimeout(resize,1000);
    try{new ResizeObserver(resize).observe(d.documentElement);new MutationObserver(resize).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true})}catch{}
    const sel=d.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=d.getElementById('languageLabel')||d.getElementById('toolbarLabel');if(lbl)lbl.style.display='none';let btn=d.getElementById('fhLangToggle');if(!btn){btn=d.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文';resize()};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}
+   if(!adminMode){
+     const shareBtn=d.getElementById('shareImageBtn');
+     if(shareBtn){
+       shareBtn.textContent=uiLang==='zh'?'📥 提交回执':'📥 Отправить расписку';
+       shareBtn.addEventListener('click',async ev=>{
+         ev.preventDefault();ev.stopImmediatePropagation();
+         const img=d.querySelector('#imageContainer img');if(!img?.src)return;
+         const old=shareBtn.textContent;shareBtn.disabled=true;shareBtn.textContent=uiLang==='zh'?'正在提交…':'Отправка…';
+         try{
+           const blob=await(await fetch(img.src)).blob();
+           const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+           const fileName=`FUTURE_HEALTH_${id}_${stamp}.png`;
+           const path=`${session.user.id}/${id}/${stamp}.png`;
+           const {error:upErr}=await sb.storage.from('signed-receipts').upload(path,blob,{contentType:'image/png',upsert:false});
+           if(upErr)throw upErr;
+           const {error:dbErr}=await sb.from('signed_receipts').insert({document_id:id,user_id:session.user.id,storage_path:path,file_name:fileName});
+           if(dbErr)throw dbErr;
+           shareBtn.textContent=uiLang==='zh'?'✓ 已提交给管理员':'✓ Отправлено администратору';
+           try{const AC=window.AudioContext||window.webkitAudioContext,ac=new AC(),o=ac.createOscillator(),g=ac.createGain();o.frequency.value=850;g.gain.value=.12;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.12);setTimeout(()=>ac.close(),300)}catch(e){}
+         }catch(e){shareBtn.disabled=false;shareBtn.textContent=old;alert(uiLang==='zh'?'提交失败，请重试。':'Не удалось отправить. Повторите попытку.');}
+       },true);
+     }
+   }
    if(adminMode){setTimeout(()=>{d.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.id==='fhLangToggle'||el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true});resize()},180)}
  }
  frame.addEventListener('load',setupFrame,{once:true});
