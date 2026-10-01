@@ -223,7 +223,7 @@
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-// V16: reliable pending-registration polling + robust signed receipt preview/download/share.
+// V20: fixed registration polling/correction notices, receipt inbox, and mobile-safe behavior.
 (() => {
   const cfg=window.APP_CONFIG||{};
   if(!window.supabase?.createClient||!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY) return;
@@ -246,33 +246,31 @@
   }
   async function requestNotification(){try{if('Notification'in window&&Notification.permission==='default')await Notification.requestPermission();}catch(e){}}
   async function checkApproval(){
-    if(approvedHandled)return;
+    if(approvedHandled)return 'approved';
     const success=document.getElementById('registerSuccess');
-    if(!success||success.classList.contains('hidden'))return;
+    if(!success||success.classList.contains('hidden'))return 'inactive';
     try{
       const {data:{session}}=await c.auth.getSession();
-      if(!session?.user?.id)return;
+      if(!session?.user?.id)return 'no-session';
       const [{data,error},{data:pendingRow}]=await Promise.all([
         c.from('profiles').select('registration_approved').eq('id',session.user.id).maybeSingle(),
         c.from('pending_registrations').select('status,admin_message,phone,full_name,full_name_zh').eq('auth_user_id',session.user.id).maybeSingle()
       ]);
-      if(error)return;
+      if(error)return 'error';
       if(pendingRow?.status==='needs_correction'){
         const key='fhCorrectionSeen:'+session.user.id+':'+(pendingRow.admin_message||'');
         if(sessionStorage.getItem(key)!=='1'){
           sessionStorage.setItem(key,'1');ding();
           try{if('Notification'in window&&Notification.permission==='granted')new Notification('FUTURE HEALTH',{body:pendingRow.admin_message||(ru()?'Администратор просит исправить данные регистрации.':'管理员要求修改注册信息。')});}catch(e){}
         }
-        success.textContent=(ru()?'Администратор просит исправить данные:
-':'管理员提示：
-')+(pendingRow.admin_message||'');success.classList.remove('hidden');
+        success.textContent=(ru()?'Администратор просит исправить данные：\n':'管理员提示：\n')+(pendingRow.admin_message||'');success.classList.remove('hidden');
         const phone=document.getElementById('registerPhone');if(phone&&pendingRow.phone)phone.value=pendingRow.phone;
         const nru=document.getElementById('registerNameRu'),nzh=document.getElementById('registerNameZh');
         if(nru&&pendingRow.full_name)nru.value=pendingRow.full_name;
         if(nzh&&(pendingRow.full_name_zh||pendingRow.full_name))nzh.value=pendingRow.full_name_zh||pendingRow.full_name;
         document.getElementById('registrationResubmitBtn')?.classList.remove('hidden');
         document.getElementById('registrationRefreshBtn')?.classList.remove('hidden');
-        return;
+        return 'correction';
       }
       document.getElementById('registrationResubmitBtn')?.classList.add('hidden');
       if(data?.registration_approved===true){
@@ -282,13 +280,15 @@
         document.getElementById('registrationWaitingControls')?.classList.add('hidden');
         try{if('Notification'in window&&Notification.permission==='granted')new Notification('FUTURE HEALTH',{body:ru()?'Регистрация подтверждена.':'注册已通过。'});}catch(e){}
         setTimeout(()=>{try{document.getElementById('registerDialog')?.close()}catch(e){};location.reload();},1000);
+        return 'approved';
       }
+      return 'pending';
     }catch(e){}
   }
   function startWait(){if(waitTimer)return;checkApproval();waitTimer=setInterval(checkApproval,2000)}
   function maybeStartWait(){const s=document.getElementById('registerSuccess');if(s&&!s.classList.contains('hidden')&&s.textContent.trim())startWait()}
   document.getElementById('registerConfirmBtn')?.addEventListener('pointerdown',()=>{unlockAudio();requestNotification()},{passive:true});
-  document.getElementById('registrationRefreshBtn')?.addEventListener('click',async()=>{unlockAudio();await checkApproval();if(!approvedHandled){const success=document.getElementById('registerSuccess');if(success){success.textContent=ru()?'Заявка всё ещё находится на проверке. Оставьте эту страницу открытой и нажмите «Обновить» позже.':'注册申请仍在审核中。请保持此页面打开，稍后再次点击“更新”。';success.classList.remove('hidden')}}});
+  document.getElementById('registrationRefreshBtn')?.addEventListener('click',async()=>{unlockAudio();const state=await checkApproval();if(!approvedHandled&&state==='pending'){const success=document.getElementById('registerSuccess');if(success){success.textContent=ru()?'Заявка всё ещё находится на проверке. Оставьте эту страницу открытой и нажмите «Обновить» позже.':'注册申请仍在审核中。请保持此页面打开，稍后再次点击“更新”。';success.classList.remove('hidden')}}});
   new MutationObserver(maybeStartWait).observe(document.body,{subtree:true,childList:true,attributes:true,characterData:true});
   window.addEventListener('pageshow',()=>{maybeStartWait();checkApproval()});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkApproval()});
