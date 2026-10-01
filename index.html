@@ -78,8 +78,8 @@
 
 <dialog id="registerDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="registerTitle">注册</h3><button type="button" class="icon-btn" data-close-dialog="registerDialog">×</button></div>
-  <label><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" autocomplete="name" placeholder="Иванов Иван Иванович"></label>
-  <label><span id="registerNameZhLabel">中文姓名</span><input id="registerNameZh" autocomplete="name" placeholder="伊万诺夫·伊万·伊万诺维奇"></label>
+  <label id="registerNameRuRow"><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" autocomplete="name" placeholder="Иванов Иван Иванович"></label>
+  <label id="registerNameZhRow"><span id="registerNameZhLabel">中文姓名</span><input id="registerNameZh" autocomplete="name" placeholder="请输入中文姓名"></label>
   <label><span id="registerPhoneLabel">手机号码 / Телефон</span><input id="registerPhone" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="8XXXXXXXXXX"></label>
   <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" minlength="8" autocomplete="new-password"></label>
   <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" minlength="8" autocomplete="new-password"></label>
@@ -167,6 +167,15 @@
   <div id="questionEditor"></div>
   <div id="contentError" class="error hidden"></div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="contentDialog" id="contentCancelBtn">取消</button><button type="button" id="saveContentBtn" class="primary">保存</button></div>
+</div></dialog>
+
+<dialog id="renameTemplateDialog"><div class="dialog-card">
+  <div class="dialog-head"><h3 id="renameTemplateTitle">重命名模板</h3><button type="button" class="icon-btn" data-close-dialog="renameTemplateDialog">×</button></div>
+  <input type="hidden" id="renameTemplateId">
+  <label><span id="renameTemplateZhLabel">中文名称</span><input id="renameTemplateZh"></label>
+  <label><span id="renameTemplateRuLabel">俄文名称</span><input id="renameTemplateRu"></label>
+  <div id="renameTemplateError" class="error hidden"></div>
+  <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="renameTemplateDialog" id="renameTemplateCancelBtn">取消</button><button type="button" id="saveTemplateRenameBtn" class="primary">保存</button></div>
 </div></dialog>
 
 <dialog id="assignDialog"><div class="dialog-card">

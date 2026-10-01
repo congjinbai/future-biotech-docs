@@ -1,11 +1,18 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FUTURE HEALTH</title>
-<style>body{font-family:system-ui;background:#eef2f7;margin:0;padding:40px;text-align:center;color:#17324d}.box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08)}.err{color:#b42318}</style></head>
-<body><div class="box" id="status"></div>
+<style>
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eef2f7;margin:0;color:#17324d}.status-box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08);text-align:center}.err{color:#b42318}.viewer-shell{width:100%;max-width:760px;margin:0 auto;padding:10px 0 32px}.viewer-frame{display:block;width:100%;border:0;background:transparent;min-height:420px}.system-footer{width:calc(100% - 24px);max-width:680px;margin:18px auto 34px;text-align:center;position:relative;z-index:99999}.system-back{display:block;width:100%;text-decoration:none;border:0;border-radius:16px;padding:13px 22px;background:#0b4f86;color:#fff;font-weight:750;font-size:15px;box-shadow:0 4px 14px rgba(11,79,134,.18)}@media(max-width:720px){.viewer-shell{padding-top:0}.system-footer{margin-top:14px}}
+</style></head>
+<body>
+<div class="status-box" id="status"></div>
+<div id="viewerShell" class="viewer-shell" hidden>
+  <iframe id="docFrame" class="viewer-frame" title="FUTURE HEALTH document" scrolling="no"></iframe>
+  <div class="system-footer"><a id="systemBack" class="system-back" href="./">返回</a></div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script>
 (async()=>{
  const cfg=window.APP_CONFIG,sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
  const uiLang=(localStorage.getItem('fh_ui_lang')||localStorage.getItem('fb_ui_lang')||'zh')==='ru'?'ru':'zh';
- const txt=uiLang==='zh'?{opening:'正在验证权限并打开文件…',missing:'缺少文件编号。',denied:'没有权限查看此文件，或文件不存在。',nosource:'该文件尚未导入原始源代码。',backAdmin:'返回',readonly:'管理员只读查看',bottomUser:'退出文件，返回文件列表'}:{opening:'Проверка доступа и открытие документа…',missing:'Не указан номер документа.',denied:'Нет доступа к документу или документ не существует.',nosource:'Исходный код этого документа ещё не загружен.',backAdmin:'Назад',readonly:'Просмотр администратора: только чтение',bottomUser:'Выйти из документа и вернуться к списку'};
+ const txt=uiLang==='zh'?{opening:'正在验证权限并打开文件…',missing:'缺少文件编号。',denied:'没有权限查看此文件，或文件不存在。',nosource:'该文件尚未导入原始源代码。',back:'返回',readonly:'管理员只读查看'}:{opening:'Проверка доступа и открытие документа…',missing:'Не указан номер документа.',denied:'Нет доступа к документу или документ не существует.',nosource:'Исходный код этого документа ещё не загружен.',back:'Назад',readonly:'Просмотр администратора: только чтение'};
  document.documentElement.lang=uiLang==='zh'?'zh-CN':'ru';document.getElementById('status').textContent=txt.opening;
  const qs=new URLSearchParams(location.search),id=qs.get('id'),requestedAdmin=qs.get('mode')==='admin';
  const {data:{session}}=await sb.auth.getSession();if(!session){location.replace('./');return}
@@ -25,15 +32,22 @@
    const {data:p}=await sb.from('profiles').select('id,display_name_ru,display_name_zh,employee_code').eq('id',session.user.id).single();profile=p||null;
  }
  const context={profile:profile||{},payload:data.payload||{},document_id:id,admin_readonly:adminMode};
- const backHref=adminMode?'./index.html#documents':'./index.html';
- const nav=`<style id="fh-system-style">.fh-system-strip{max-width:680px;width:calc(100% - 24px);margin:12px auto 0;text-align:center;font-family:system-ui,-apple-system,sans-serif}.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>${adminMode?`<div class="fh-system-strip"><span class="fh-readonly-badge">${txt.readonly}</span></div>`:''}`;
- const bottom=`<div style="max-width:680px;width:calc(100% - 24px);margin:22px auto 34px;text-align:center;font-family:system-ui"><a href="${backHref}" style="display:inline-block;text-decoration:none;border:0;border-radius:999px;padding:12px 24px;background:#0b4f86;color:#fff;font-weight:700;font-size:14px;cursor:pointer">← ${adminMode?txt.backAdmin:txt.bottomUser}</a></div>`;
  let html=data.source_html;
  const ctxScript=`<script>window.FH_DOC_CONTEXT=${JSON.stringify(context).replace(/</g,'\\u003c')};<\/script>`;
- html=html.replace(/<body([^>]*)>/i,m=>m+ctxScript+nav);
- html=html.replace(/<\/body>/i,bottom+'</body>');
- document.open();document.write(html);document.close();
- setTimeout(()=>{const sel=document.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=document.getElementById('languageLabel');if(lbl)lbl.style.display='none';let btn=document.getElementById('fhLangToggle');if(!btn){btn=document.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文'};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}},120);
- if(adminMode){setTimeout(()=>{document.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.id==='fhLangToggle'||el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true})},180)}
+ const injectedStyle=`<style id="fh-system-style">.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:block;max-width:680px;width:calc(100% - 24px);margin:12px auto 8px;text-align:center;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font:700 12px system-ui,-apple-system,sans-serif}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>`;
+ const badge=adminMode?`<div class="fh-readonly-badge">${txt.readonly}</div>`:'';
+ html=html.replace(/<body([^>]*)>/i,m=>m+ctxScript+injectedStyle+badge);
+ const frame=document.getElementById('docFrame'),shell=document.getElementById('viewerShell'),status=document.getElementById('status'),back=document.getElementById('systemBack');
+ back.href=adminMode?'./index.html#documents':'./index.html';back.textContent='← '+txt.back;
+ frame.srcdoc=html;status.hidden=true;shell.hidden=false;
+ function setupFrame(){
+   const d=frame.contentDocument,w=frame.contentWindow;if(!d||!w)return;
+   const resize=()=>{try{const h=Math.max(d.documentElement?.scrollHeight||0,d.body?.scrollHeight||0,420);frame.style.height=(h+12)+'px'}catch{}};
+   resize();setTimeout(resize,150);setTimeout(resize,700);setTimeout(resize,1800);
+   try{new ResizeObserver(resize).observe(d.documentElement);new MutationObserver(resize).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true})}catch{}
+   const sel=d.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=d.getElementById('languageLabel')||d.getElementById('toolbarLabel');if(lbl)lbl.style.display='none';let btn=d.getElementById('fhLangToggle');if(!btn){btn=d.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文';resize()};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}
+   if(adminMode){setTimeout(()=>{d.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.id==='fhLangToggle'||el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true});resize()},180)}
+ }
+ frame.addEventListener('load',setupFrame,{once:true});
 })();
 </script></body></html>
