@@ -69,13 +69,14 @@
         <div id="pendingRegistrationsBox" class="pending-box hidden"></div>
         <div class="section-head">
           <div><h2 id="usersTitle">账户</h2><p id="usersHint" class="muted">可修改账户名称并重置密码。</p></div>
-          <button id="newUserBtn" type="button" class="primary">＋ 新建账户</button>
+          <div class="row"><button id="deleteUsersModeBtn" type="button" class="danger">删除账户</button><button id="newUserBtn" type="button" class="primary">＋ 新建账户</button></div>
         </div>
+        <div id="userBulkBar" class="notice hidden" style="margin-bottom:12px"><div class="row" style="justify-content:space-between"><div><span id="userBulkHint">请选择要删除的账户，可单选或多选。</span> <strong id="userBulkCount">0</strong></div><div class="row"><button type="button" id="cancelBulkUsers" class="ghost small">取消</button><button type="button" id="confirmBulkUsers" class="danger small">删除所选</button></div></div></div>
         <div id="userList"></div>
       </section>
 
       <section id="tab-receipts" class="panel admin-tab hidden">
-        <div class="section-head"><div><h2 id="receiptsTitle">回执文件夹</h2><p id="receiptsHint" class="muted">用户提交的已签字文件会集中保存在这里。</p></div></div>
+        <div class="section-head"><div><h2 id="receiptsTitle">回执文件夹</h2><p id="receiptsHint" class="muted">用户提交的已签字文件会集中保存在这里。</p></div><div class="row"><button type="button" id="receiptSelectAll" class="ghost small">全选</button><button type="button" id="receiptClearAll" class="ghost small">清空</button><button type="button" id="receiptDeleteSelected" class="danger small">批量删除</button></div></div>
         <div id="receiptInbox"></div>
       </section>
     </section>
@@ -195,18 +196,29 @@
 </div></dialog>
 
 
+
+<dialog id="renameDocumentDialog"><div class="dialog-card">
+  <div class="dialog-head"><h3 id="renameDocumentTitle">重命名文件</h3><button type="button" class="icon-btn" data-close-dialog="renameDocumentDialog">×</button></div>
+  <input type="hidden" id="renameDocumentId">
+  <label><span id="renameDocumentZhLabel">中文名称</span><input id="renameDocumentZh"></label>
+  <label><span id="renameDocumentRuLabel">俄文名称</span><input id="renameDocumentRu"></label>
+  <div id="renameDocumentError" class="error hidden"></div>
+  <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="renameDocumentDialog" id="renameDocumentCancelBtn">取消</button><button type="button" id="saveDocumentRenameBtn" class="primary">保存</button></div>
+</div></dialog>
+
 <dialog id="receiptPreviewDialog"><div class="dialog-card" style="max-width:760px">
   <div class="dialog-head"><h3 id="receiptPreviewTitle">回执预览</h3><button type="button" class="icon-btn" id="receiptPreviewClose">×</button></div>
   <div style="text-align:center"><img id="receiptPreviewImage" alt="receipt" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #e3e8ef"></div>
   <p id="receiptPreviewHint" class="muted" style="text-align:center;margin:10px 0 0">手机可长按图片保存，也可以使用下面的下载或转发按钮。</p>
   <div class="dialog-actions" style="justify-content:center;flex-wrap:wrap">
     <button type="button" id="receiptPreviewDownload" class="primary">下载</button>
-    <button type="button" id="receiptPreviewShare" class="ghost">转发</button>
+    <button type="button" id="receiptPreviewDelete" class="danger">删除</button>
     <button type="button" id="receiptPreviewClose2" class="ghost">关闭</button>
   </div>
 </div></dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/pinyin-pro"></script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script>
@@ -260,71 +272,64 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkApproval()});
   setTimeout(maybeStartWait,400);
 
-  // Receipt inbox
+  // Receipt inbox V18: bilingual label + per-user folders + view/download/delete + batch delete.
   const tabBtn=document.getElementById('tabReceiptsBtn'),panel=document.getElementById('tab-receipts'),box=document.getElementById('receiptInbox'),badge=document.getElementById('receiptBadge');
   const preview=document.getElementById('receiptPreviewDialog'),previewImg=document.getElementById('receiptPreviewImage');
   const previewTitle=document.getElementById('receiptPreviewTitle'),previewHint=document.getElementById('receiptPreviewHint');
-  const previewDownload=document.getElementById('receiptPreviewDownload'),previewShare=document.getElementById('receiptPreviewShare');
-  let currentBlob=null,currentName='receipt.png',currentObjectUrl=null,currentReceiptId=null;
+  const previewDownload=document.getElementById('receiptPreviewDownload'),previewDelete=document.getElementById('receiptPreviewDelete');
+  let currentBlob=null,currentName='receipt.png',currentObjectUrl=null,currentReceiptId=null,currentReceiptPath=null;
+  const selectedReceipts=new Set();
   function updateReceiptLang(){
-    if(tabBtn)tabBtn.childNodes[0].nodeValue=ru()?'Расписки':'回执';
-    const t=document.getElementById('receiptsTitle'),h=document.getElementById('receiptsHint');
-    if(t)t.textContent=ru()?'Папка расписок':'回执文件夹';
-    if(h)h.textContent=ru()?'Подписанные файлы пользователей сохраняются здесь.':'用户提交的已签字文件会集中保存在这里。';
+    if(tabBtn){const n=badge;tabBtn.textContent=ru()?'Расписки':'回执';if(n)tabBtn.appendChild(n)}
+    const title=document.getElementById('receiptsTitle'),hint=document.getElementById('receiptsHint');
+    if(title)title.textContent=ru()?'Папка расписок':'回执文件夹';
+    if(hint)hint.textContent=ru()?'Подписанные документы сгруппированы по пользователям.':'已签字回执按用户分别归档。';
     if(previewTitle)previewTitle.textContent=ru()?'Просмотр расписки':'回执预览';
-    if(previewHint)previewHint.textContent=ru()?'На телефоне можно удерживать изображение для сохранения или использовать кнопки ниже.':'手机可长按图片保存，也可以使用下面的下载或转发按钮。';
+    if(previewHint)previewHint.textContent=ru()?'На телефоне можно удерживать изображение для сохранения или нажать «Скачать».':'手机可长按图片保存，也可以点击“下载”。';
     if(previewDownload)previewDownload.textContent=ru()?'Скачать':'下载';
-    if(previewShare)previewShare.textContent=ru()?'Поделиться':'转发';
+    if(previewDelete)previewDelete.textContent=ru()?'Удалить':'删除';
     const c2=document.getElementById('receiptPreviewClose2');if(c2)c2.textContent=ru()?'Закрыть':'关闭';
+    const sa=document.getElementById('receiptSelectAll'),cl=document.getElementById('receiptClearAll'),del=document.getElementById('receiptDeleteSelected');
+    if(sa)sa.textContent=ru()?'Выбрать все':'全选';if(cl)cl.textContent=ru()?'Очистить':'清空';if(del)del.textContent=ru()?'Удалить выбранные':'批量删除';
   }
-  async function fetchReceipt(path){
-    const {data,error}=await c.storage.from('signed-receipts').download(path);
-    if(error||!data)throw error||new Error('DOWNLOAD_FAILED');
-    return data;
-  }
+  async function fetchReceipt(path){const {data,error}=await c.storage.from('signed-receipts').download(path);if(error||!data)throw error||new Error('DOWNLOAD_FAILED');return data}
   async function markRead(id){try{await c.from('signed_receipts').update({read_at:new Date().toISOString()}).eq('id',id)}catch(e){}}
-  async function openPreview(path,name,rid){
-    try{
-      const blob=await fetchReceipt(path);
-      currentBlob=blob;currentName=name||'receipt.png';currentReceiptId=rid;
-      if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);
-      currentObjectUrl=URL.createObjectURL(blob);previewImg.src=currentObjectUrl;updateReceiptLang();
-      try{preview.showModal()}catch(e){preview.setAttribute('open','')}
-      await markRead(rid);loadInbox();
-    }catch(e){alert(ru()?'Не удалось открыть файл.':'无法打开文件。')}
+  async function deleteReceipt(id,path,ask=true){
+    if(ask&&!confirm(ru()?'Удалить эту расписку?':'确认删除这个回执？'))return false;
+    const s=await c.storage.from('signed-receipts').remove([path]);if(s.error)throw s.error;
+    const d=await c.from('signed_receipts').delete().eq('id',id);if(d.error)throw d.error;
+    selectedReceipts.delete(id);return true;
   }
-  async function saveBlob(blob,name){
-    const file=new File([blob],name,{type:blob.type||'image/png'});
-    // iPhone/PWA: Web Share is much more reliable than the download attribute and includes “Save Image/Save to Files”.
-    if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]})) && /iPhone|iPad|iPod/i.test(navigator.userAgent)){
-      try{await navigator.share({files:[file],title:name});return}catch(e){if(e?.name==='AbortError')return}
-    }
-    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
-  }
+  async function openPreview(path,name,rid){try{const blob=await fetchReceipt(path);currentBlob=blob;currentName=name||'receipt.png';currentReceiptId=rid;currentReceiptPath=path;if(currentObjectUrl)URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=URL.createObjectURL(blob);previewImg.src=currentObjectUrl;updateReceiptLang();try{preview.showModal()}catch(e){preview.setAttribute('open','')}await markRead(rid);loadInbox()}catch(e){alert(ru()?'Не удалось открыть файл.':'无法打开文件。')}}
+  async function saveBlob(blob,name){const file=new File([blob],name,{type:blob.type||'image/png'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))&&/iPhone|iPad|iPod/i.test(navigator.userAgent)){try{await navigator.share({files:[file],title:name});return}catch(e){if(e?.name==='AbortError')return}}const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
   previewDownload?.addEventListener('click',async()=>{if(currentBlob)await saveBlob(currentBlob,currentName)});
-  previewShare?.addEventListener('click',async()=>{if(!currentBlob)return;const f=new File([currentBlob],currentName,{type:currentBlob.type||'image/png'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[f]}))){try{await navigator.share({files:[f],title:currentName})}catch(e){}}else await saveBlob(currentBlob,currentName)});
+  previewDelete?.addEventListener('click',async()=>{if(!currentReceiptId||!currentReceiptPath)return;try{if(await deleteReceipt(currentReceiptId,currentReceiptPath,true)){closePreview();await loadInbox()}}catch(e){alert(ru()?'Не удалось удалить файл.':'删除失败。')}});
   function closePreview(){try{preview.close()}catch(e){preview.removeAttribute('open')}}
-  document.getElementById('receiptPreviewClose')?.addEventListener('click',closePreview);
-  document.getElementById('receiptPreviewClose2')?.addEventListener('click',closePreview);
-
+  document.getElementById('receiptPreviewClose')?.addEventListener('click',closePreview);document.getElementById('receiptPreviewClose2')?.addEventListener('click',closePreview);
+  function attachInboxHandlers(){
+    box.querySelectorAll('.receipt-view').forEach(b=>b.addEventListener('click',()=>openPreview(b.dataset.path,b.dataset.name,b.closest('[data-rid]').dataset.rid)));
+    box.querySelectorAll('.receipt-download').forEach(b=>b.addEventListener('click',async()=>{try{const blob=await fetchReceipt(b.dataset.path);await markRead(b.closest('[data-rid]').dataset.rid);await saveBlob(blob,b.dataset.name||'receipt.png');loadInbox()}catch(e){alert(ru()?'Не удалось скачать файл.':'下载失败。')}}));
+    box.querySelectorAll('.receipt-delete').forEach(b=>b.addEventListener('click',async()=>{try{const row=b.closest('[data-rid]');if(await deleteReceipt(row.dataset.rid,b.dataset.path,true))loadInbox()}catch(e){alert(ru()?'Не удалось удалить файл.':'删除失败。')}}));
+    box.querySelectorAll('.receipt-check').forEach(ch=>ch.addEventListener('change',()=>{if(ch.checked)selectedReceipts.add(ch.value);else selectedReceipts.delete(ch.value)}));
+  }
   async function loadInbox(){
-    if(!box)return;
-    const {data:{session}}=await c.auth.getSession();if(!session)return;
-    const {data:me}=await c.from('profiles').select('is_admin').eq('id',session.user.id).maybeSingle();if(!me?.is_admin)return;
-    const {data:rows,error}=await c.from('signed_receipts').select('id,document_id,user_id,storage_path,file_name,created_at,read_at').order('created_at',{ascending:false});
-    if(error)return;
-    const list=rows||[],unread=list.filter(x=>!x.read_at).length;
-    if(badge){badge.textContent=String(unread);badge.classList.toggle('hidden',!unread)}
+    if(!box)return;updateReceiptLang();const {data:{session}}=await c.auth.getSession();if(!session)return;const {data:admin}=await c.from('profiles').select('is_admin').eq('id',session.user.id).maybeSingle();if(!admin?.is_admin)return;
+    const {data:rows,error}=await c.from('signed_receipts').select('id,document_id,user_id,storage_path,file_name,created_at,read_at').order('created_at',{ascending:false});if(error)return;
+    const list=rows||[],unread=list.filter(x=>!x.read_at).length;if(badge){badge.textContent=String(unread);badge.classList.toggle('hidden',!unread)}
     if(!list.length){box.innerHTML='<div class="empty">'+(ru()?'Полученных расписок пока нет.':'暂时没有收到回执。')+'</div>';return}
     const uids=[...new Set(list.map(x=>x.user_id))],dids=[...new Set(list.map(x=>x.document_id))];
     const [{data:us},{data:ds}]=await Promise.all([c.from('profiles').select('id,display_name_ru,display_name_zh,employee_code').in('id',uids),c.from('documents').select('id,title_ru,title_zh').in('id',dids)]);
     const um=Object.fromEntries((us||[]).map(x=>[x.id,x])),dm=Object.fromEntries((ds||[]).map(x=>[x.id,x]));
-    box.innerHTML=list.map(x=>{const u=um[x.user_id]||{},d=dm[x.document_id]||{};const name=ru()?(u.display_name_ru||u.display_name_zh||u.employee_code):(u.display_name_zh||u.display_name_ru||u.employee_code);const title=ru()?(d.title_ru||d.title_zh||'Документ'):(d.title_zh||d.title_ru||'文件');const when=new Date(x.created_at).toLocaleString(ru()?'ru-RU':'zh-CN');return `<div class="doc-row" data-rid="${x.id}" style="padding:14px 0;border-bottom:1px solid #e5eaf0"><div style="font-weight:700">${name||''}${x.read_at?'':' <span style="display:inline-block;width:8px;height:8px;background:#d93025;border-radius:50%;vertical-align:middle"></span>'}</div><div>${title}</div><div class="muted" style="font-size:12px;margin:4px 0 8px">${when}</div><div class="row"><button type="button" class="ghost small receipt-view" data-path="${x.storage_path}" data-name="${x.file_name}">${ru()?'Просмотр':'查看'}</button><button type="button" class="ghost small receipt-download" data-path="${x.storage_path}" data-name="${x.file_name}">${ru()?'Скачать':'下载'}</button><button type="button" class="ghost small receipt-share" data-path="${x.storage_path}" data-name="${x.file_name}">${ru()?'Поделиться':'转发'}</button></div></div>`}).join('');
-    box.querySelectorAll('.receipt-view').forEach(b=>b.addEventListener('click',()=>openPreview(b.dataset.path,b.dataset.name,b.closest('[data-rid]').dataset.rid)));
-    box.querySelectorAll('.receipt-download').forEach(b=>b.addEventListener('click',async()=>{try{const blob=await fetchReceipt(b.dataset.path);await markRead(b.closest('[data-rid]').dataset.rid);await saveBlob(blob,b.dataset.name||'receipt.png');loadInbox()}catch(e){alert(ru()?'Не удалось скачать файл.':'下载失败。')}}));
-    box.querySelectorAll('.receipt-share').forEach(b=>b.addEventListener('click',async()=>{try{const blob=await fetchReceipt(b.dataset.path),name=b.dataset.name||'receipt.png',f=new File([blob],name,{type:blob.type||'image/png'});await markRead(b.closest('[data-rid]').dataset.rid);if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[f]}))){try{await navigator.share({files:[f],title:name})}catch(e){}}else await saveBlob(blob,name);loadInbox()}catch(e){alert(ru()?'Не удалось открыть меню отправки.':'无法打开转发菜单。')}}));
+    const groups={};for(const x of list)(groups[x.user_id]??=[]).push(x);
+    box.innerHTML=Object.entries(groups).map(([uid,items])=>{const u=um[uid]||{},name=ru()?(u.display_name_ru||u.display_name_zh||u.employee_code):(u.display_name_zh||u.display_name_ru||u.employee_code),nUnread=items.filter(x=>!x.read_at).length;
+      const files=items.map(x=>{const d=dm[x.document_id]||{},title=ru()?(d.title_ru||d.title_zh||'Документ'):(d.title_zh||d.title_ru||'文件'),when=new Date(x.created_at).toLocaleString(ru()?'ru-RU':'zh-CN');return `<div class="doc-row" data-rid="${x.id}" style="padding:12px 0;border-bottom:1px solid #e5eaf0"><div class="row" style="align-items:flex-start"><label style="padding-top:3px"><input class="receipt-check" type="checkbox" value="${x.id}" ${selectedReceipts.has(x.id)?'checked':''}></label><div style="flex:1"><div style="font-weight:700">${title}${x.read_at?'':' <span style="display:inline-block;width:8px;height:8px;background:#d93025;border-radius:50%;vertical-align:middle"></span>'}</div><div class="muted" style="font-size:12px;margin:4px 0 8px">${when}</div><div class="row"><button type="button" class="ghost small receipt-view" data-path="${x.storage_path}" data-name="${x.file_name}">${ru()?'Просмотр':'查看'}</button><button type="button" class="ghost small receipt-download" data-path="${x.storage_path}" data-name="${x.file_name}">${ru()?'Скачать':'下载'}</button><button type="button" class="danger small receipt-delete" data-path="${x.storage_path}">${ru()?'Удалить':'删除'}</button></div></div></div></div>`}).join('');
+      return `<details class="receipt-user-folder" open style="border:1px solid #e5eaf0;border-radius:14px;padding:12px 14px;margin-bottom:12px"><summary style="cursor:pointer;font-weight:800">📁 ${name||''} <span class="pill">${items.length}</span>${nUnread?` <span class="notify-badge">${nUnread}</span>`:''}</summary><div style="padding-top:6px">${files}</div></details>`}).join('');attachInboxHandlers();
   }
+  document.getElementById('receiptSelectAll')?.addEventListener('click',()=>{box.querySelectorAll('.receipt-check').forEach(ch=>{ch.checked=true;selectedReceipts.add(ch.value)})});
+  document.getElementById('receiptClearAll')?.addEventListener('click',()=>{selectedReceipts.clear();box.querySelectorAll('.receipt-check').forEach(ch=>ch.checked=false)});
+  document.getElementById('receiptDeleteSelected')?.addEventListener('click',async()=>{if(!selectedReceipts.size)return alert(ru()?'Выберите хотя бы одну расписку.':'请至少选择一个回执。');if(!confirm(ru()?`Удалить выбранные расписки (${selectedReceipts.size})?`:`确认删除所选 ${selectedReceipts.size} 个回执？`))return;const rows=[...box.querySelectorAll('[data-rid]')].filter(r=>selectedReceipts.has(r.dataset.rid));for(const row of rows){const btn=row.querySelector('.receipt-delete');try{await deleteReceipt(row.dataset.rid,btn?.dataset.path,false)}catch(e){}}selectedReceipts.clear();loadInbox()});
   if(tabBtn)tabBtn.addEventListener('click',()=>{document.querySelectorAll('.admin-tab').forEach(x=>x.classList.add('hidden'));document.querySelectorAll('.admin-tabs button').forEach(x=>x.classList.remove('active'));panel?.classList.remove('hidden');tabBtn.classList.add('active');loadInbox()});
+  new MutationObserver(()=>{updateReceiptLang();if(panel&&!panel.classList.contains('hidden'))loadInbox()}).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
   updateReceiptLang();setTimeout(loadInbox,1000);setInterval(loadInbox,15000);
 })();
 </script>
