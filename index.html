@@ -62,7 +62,7 @@ html[lang^="ru"] #deleteUsersModeBtn {
     <h1 id="loginTitle">文件系统</h1>
     <form id="loginForm">
       <label><span class="label-head"><span id="loginIdLabel">个人编号</span><small id="loginIdHint" class="inline-hint">请输入手机号</small></span><input id="loginId" inputmode="text" autocapitalize="characters" autocomplete="username" required placeholder="8XXXXXXXXXX"></label>
-      <label><span id="loginPasswordLabel">密码</span><input id="password" type="password" inputmode="text" autocomplete="current-password" required></label>
+      <label><span id="loginPasswordLabel">密码</span><input id="password" type="password" inputmode="email" lang="en" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="current-password" required></label>
       <button id="loginSubmitBtn" class="primary wide" type="submit">登录</button>
     </form>
     <button id="openRegisterBtn" type="button" class="ghost wide register-entry">注册</button>
@@ -133,11 +133,11 @@ html[lang^="ru"] #deleteUsersModeBtn {
 
 <dialog id="registerDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="registerTitle">注册</h3><button type="button" class="icon-btn" data-close-dialog="registerDialog">×</button></div>
-  <label id="registerNameRuRow"><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" inputmode="text" autocapitalize="characters" spellcheck="false" autocomplete="name" placeholder="ИВАНОВ ИВАН ИВАНОВИЧ"></label>
-  <label id="registerNameZhRow"><span id="registerNameZhLabel">中文姓名</span><input id="registerNameZh" inputmode="text" autocapitalize="characters" spellcheck="false" autocomplete="name" placeholder="请输入中文姓名"></label>
+  <label id="registerNameRuRow"><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" inputmode="text" autocapitalize="words" spellcheck="false" autocomplete="name" placeholder="Иванов Иван Иванович"></label>
+  <label id="registerNameZhRow"><span id="registerNameZhLabel">中文姓名</span><input id="registerNameZh" inputmode="text" autocapitalize="none" spellcheck="false" autocomplete="name" placeholder="请输入中文姓名"></label>
   <label><span id="registerPhoneLabel">手机号码 / Телефон</span><input id="registerPhone" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="8XXXXXXXXXX"></label>
-  <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" inputmode="text" minlength="8" autocomplete="new-password"></label>
-  <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" inputmode="text" minlength="8" autocomplete="new-password"></label>
+  <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" inputmode="email" lang="en" autocapitalize="none" autocorrect="off" spellcheck="false" minlength="8" autocomplete="new-password"></label>
+  <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" inputmode="email" lang="en" autocapitalize="none" autocorrect="off" spellcheck="false" minlength="8" autocomplete="new-password"></label>
   <div id="registerHint" class="muted">个人编号使用您的 11 位手机号码，必须以 8 或 1 开头。</div>
   <div id="registerError" class="error hidden"></div>
   <div id="registerSuccess" class="notice hidden"></div>
@@ -163,8 +163,8 @@ html[lang^="ru"] #deleteUsersModeBtn {
   <div class="dialog-head"><h3 id="editUserTitle">账户管理</h3><button type="button" class="icon-btn" data-close-dialog="editUserDialog">×</button></div>
   <input id="editUserId" type="hidden">
   <div class="notice" id="editUserCode"></div>
-  <label><span id="editRuLabel">俄文姓名</span><input id="editNameRu" autocomplete="off"></label>
-  <label><span id="editZhLabel">中文姓名</span><input id="editNameZh" autocomplete="off"></label>
+  <label><span id="editRuLabel">俄文姓名</span><input id="editNameRu" inputmode="text" autocapitalize="words" spellcheck="false" autocomplete="off"></label>
+  <label><span id="editZhLabel">中文姓名</span><input id="editNameZh" inputmode="text" autocapitalize="none" spellcheck="false" autocomplete="off"></label>
   <label id="editRoleRow"><span id="editRoleLabel">权限设置</span><select id="editAccountRole"><option value="user">普通用户</option><option value="manager">二级管理员</option><option value="admin">管理员</option></select></label>
   <div class="dialog-actions"><button type="button" id="saveUserProfile" class="primary">保存账户名称</button></div>
   <hr class="sep">
@@ -176,8 +176,8 @@ html[lang^="ru"] #deleteUsersModeBtn {
 
 <dialog id="changePasswordDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="changePasswordTitle">修改密码</h3><button type="button" class="icon-btn" data-close-dialog="changePasswordDialog">×</button></div>
-  <label><span id="myNewPasswordLabel">新密码</span><input id="myNewPassword" type="password" inputmode="text" minlength="8" autocomplete="new-password"></label>
-  <label><span id="myNewPassword2Label">再次输入新密码</span><input id="myNewPassword2" type="password" inputmode="text" minlength="8" autocomplete="new-password"></label>
+  <label><span id="myNewPasswordLabel">新密码</span><input id="myNewPassword" type="password" inputmode="email" lang="en" autocapitalize="none" autocorrect="off" spellcheck="false" minlength="8" autocomplete="new-password"></label>
+  <label><span id="myNewPassword2Label">再次输入新密码</span><input id="myNewPassword2" type="password" inputmode="email" lang="en" autocapitalize="none" autocorrect="off" spellcheck="false" minlength="8" autocomplete="new-password"></label>
   <div id="myPasswordError" class="error hidden"></div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="changePasswordDialog" id="changePasswordCancelBtn">取消</button><button type="button" id="saveMyPassword" class="primary">保存新密码</button></div>
 </div></dialog>
@@ -429,6 +429,69 @@ html[lang^="ru"] #deleteUsersModeBtn {
   obs.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
   document.addEventListener('DOMContentLoaded',apply);
   setTimeout(apply,50); setTimeout(apply,500);
+})();
+</script>
+
+<script id="v25-language-and-name-fixes">
+(()=>{
+  // Keep the currently selected administrator tab when changing interface language.
+  const langBtn=document.getElementById('toggleLang');
+  if(langBtn){
+    langBtn.addEventListener('click',()=>{
+      const active=document.querySelector('.admin-tabs button.active');
+      const tab=active?.dataset?.tab || null;
+      if(!tab)return;
+      const ids={templates:'tabTemplatesBtn',documents:'tabDocumentsBtn',users:'tabUsersBtn',receipts:'tabReceiptsBtn'};
+      const restore=()=>{
+        const b=document.getElementById(ids[tab]);
+        const panel=document.getElementById('tab-'+tab);
+        // Re-open the same section after the original language renderer finishes.
+        if(b && (!b.classList.contains('active') || panel?.classList.contains('hidden'))) b.click();
+      };
+      setTimeout(restore,0);
+      setTimeout(restore,80);
+    },true);
+  }
+
+  function russianNameCase(value){
+    return String(value||'')
+      .replace(/[^А-Яа-яЁё ]/g,'')
+      .replace(/[А-Яа-яЁё]+/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase());
+  }
+  function chineseOnly(value){
+    // Han characters + spaces only. This runs after IME composition, so Pinyin input still works.
+    return String(value||'').replace(/[^\p{Script=Han} ]/gu,'');
+  }
+  function preserveCaretTransform(el,fn){
+    if(!el)return;
+    const start=el.selectionStart, old=el.value, next=fn(old);
+    if(next===old)return;
+    el.value=next;
+    try{ const pos=Math.min(start??next.length,next.length); el.setSelectionRange(pos,pos); }catch(e){}
+  }
+  function bindRussian(id){
+    const el=document.getElementById(id); if(!el||el.dataset.v25Bound)return; el.dataset.v25Bound='1';
+    el.addEventListener('input',()=>preserveCaretTransform(el,russianNameCase));
+    el.addEventListener('blur',()=>{el.value=russianNameCase(el.value).trim().replace(/ +/g,' ')});
+  }
+  function bindChinese(id){
+    const el=document.getElementById(id); if(!el||el.dataset.v25Bound)return; el.dataset.v25Bound='1';
+    let composing=false;
+    el.addEventListener('compositionstart',()=>{composing=true});
+    el.addEventListener('compositionend',()=>{composing=false;preserveCaretTransform(el,chineseOnly)});
+    el.addEventListener('input',()=>{if(!composing)preserveCaretTransform(el,chineseOnly)});
+    el.addEventListener('blur',()=>{el.value=chineseOnly(el.value).trim().replace(/ +/g,' ')});
+  }
+  bindRussian('registerNameRu'); bindRussian('editNameRu');
+  bindChinese('registerNameZh'); bindChinese('editNameZh');
+
+  // Ask mobile keyboards for a Latin layout on password fields. iOS ultimately controls the keyboard,
+  // but email input mode + en language is the strongest standards-based hint without changing password semantics.
+  ['password','registerPassword','registerPassword2','myNewPassword','myNewPassword2'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    el.setAttribute('inputmode','email'); el.setAttribute('lang','en');
+    el.setAttribute('autocapitalize','none'); el.setAttribute('autocorrect','off'); el.spellcheck=false;
+  });
 })();
 </script>
 </body></html>
