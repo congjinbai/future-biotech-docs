@@ -5,6 +5,54 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=yes">
 <title>FUTURE HEALTH</title>
 <link rel="stylesheet" href="styles.css">
+
+<style id="v24-russian-admin-compact">
+/* V24: compact Russian admin primary action pairs */
+html[lang^="ru"] #tab-templates .section-head > .row,
+html[lang^="ru"] #tab-documents .section-head > .row,
+html[lang^="ru"] #tab-users .section-head > .row {
+  display:flex !important;
+  flex-direction:row !important;
+  flex-wrap:nowrap !important;
+  align-items:center !important;
+  gap:8px !important;
+}
+html[lang^="ru"] #newTemplateBtn,
+html[lang^="ru"] #deleteTemplatesModeBtn,
+html[lang^="ru"] #newDocBtn,
+html[lang^="ru"] #deleteDocsModeBtn,
+html[lang^="ru"] #newUserBtn,
+html[lang^="ru"] #deleteUsersModeBtn {
+  width:auto !important;
+  min-width:0 !important;
+  padding:9px 13px !important;
+  border-radius:14px !important;
+  font-size:14px !important;
+  line-height:1.1 !important;
+  font-weight:700 !important;
+  white-space:nowrap !important;
+  flex:0 0 auto !important;
+}
+@media (max-width:640px){
+  html[lang^="ru"] #tab-templates .section-head > .row,
+  html[lang^="ru"] #tab-documents .section-head > .row,
+  html[lang^="ru"] #tab-users .section-head > .row {
+    width:100% !important;
+    justify-content:flex-start !important;
+    gap:7px !important;
+  }
+  html[lang^="ru"] #newTemplateBtn,
+  html[lang^="ru"] #deleteTemplatesModeBtn,
+  html[lang^="ru"] #newDocBtn,
+  html[lang^="ru"] #deleteDocsModeBtn,
+  html[lang^="ru"] #newUserBtn,
+  html[lang^="ru"] #deleteUsersModeBtn {
+    padding:9px 11px !important;
+    font-size:13px !important;
+    border-radius:13px !important;
+  }
+}
+</style>
 </head>
 <body>
 <div id="loginView" class="center-shell hidden">
@@ -354,6 +402,33 @@
   if(tabBtn)tabBtn.addEventListener('click',()=>{document.querySelectorAll('.admin-tab').forEach(x=>x.classList.add('hidden'));document.querySelectorAll('.admin-tabs button').forEach(x=>x.classList.remove('active'));panel?.classList.remove('hidden');tabBtn.classList.add('active');loadInbox()});
   new MutationObserver(()=>{updateReceiptLang();if(panel&&!panel.classList.contains('hidden'))loadInbox()}).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
   updateReceiptLang();setTimeout(loadInbox,1000);setInterval(loadInbox,15000);
+})();
+</script>
+
+<script id="v24-russian-admin-actions">
+(()=>{
+  function isRu(){return (document.documentElement.lang||'').toLowerCase().startsWith('ru')}
+  function setText(id,ruText,zhText){const e=document.getElementById(id);if(e)e.textContent=isRu()?ruText:zhText}
+  function normalizeOrder(row,addId,deleteId){
+    if(!row)return;
+    const add=document.getElementById(addId), del=document.getElementById(deleteId);
+    if(add&&del){row.appendChild(add);row.appendChild(del)}
+  }
+  function apply(){
+    setText('newTemplateBtn','+ Шаблон','＋ 添加模板');
+    setText('deleteTemplatesModeBtn','− Шаблон','删除模板');
+    setText('newDocBtn','+ Документы','＋ 新建文件');
+    setText('deleteDocsModeBtn','− Документы','删除文件');
+    setText('newUserBtn','+ Аккаунты','＋ 新建账户');
+    setText('deleteUsersModeBtn','− Аккаунты','删除账户');
+    normalizeOrder(document.querySelector('#tab-templates .section-head > .row'),'newTemplateBtn','deleteTemplatesModeBtn');
+    normalizeOrder(document.querySelector('#tab-documents .section-head > .row'),'newDocBtn','deleteDocsModeBtn');
+    normalizeOrder(document.querySelector('#tab-users .section-head > .row'),'newUserBtn','deleteUsersModeBtn');
+  }
+  const obs=new MutationObserver(()=>apply());
+  obs.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+  document.addEventListener('DOMContentLoaded',apply);
+  setTimeout(apply,50); setTimeout(apply,500);
 })();
 </script>
 </body></html>
