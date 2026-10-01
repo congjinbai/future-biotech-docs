@@ -13,8 +13,8 @@
     <img src="future-health-logo.png" alt="FUTURE HEALTH" class="login-logo">
     <h1 id="loginTitle">文件系统</h1>
     <form id="loginForm">
-      <label><span class="label-head"><span id="loginIdLabel">个人编号</span><small id="loginIdHint" class="inline-hint">请输入手机号</small></span><input id="loginId" inputmode="numeric" autocomplete="username" required placeholder="8XXXXXXXXXX"></label>
-      <label><span id="loginPasswordLabel">密码</span><input id="password" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" required></label>
+      <label><span class="label-head"><span id="loginIdLabel">个人编号</span><small id="loginIdHint" class="inline-hint">请输入手机号</small></span><input id="loginId" inputmode="text" autocapitalize="characters" autocomplete="username" required placeholder="8XXXXXXXXXX"></label>
+      <label><span id="loginPasswordLabel">密码</span><input id="password" type="password" inputmode="text" autocomplete="current-password" required></label>
       <button id="loginSubmitBtn" class="primary wide" type="submit">登录</button>
     </form>
     <button id="openRegisterBtn" type="button" class="ghost wide register-entry">注册</button>
@@ -85,11 +85,11 @@
 
 <dialog id="registerDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="registerTitle">注册</h3><button type="button" class="icon-btn" data-close-dialog="registerDialog">×</button></div>
-  <label id="registerNameRuRow"><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" autocomplete="name" placeholder="ИВАНОВ ИВАН ИВАНОВИЧ"></label>
-  <label id="registerNameZhRow"><span id="registerNameZhLabel">中文姓名</span><input id="registerNameZh" autocomplete="name" placeholder="请输入中文姓名"></label>
+  <label id="registerNameRuRow"><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" inputmode="text" autocapitalize="characters" spellcheck="false" autocomplete="name" placeholder="ИВАНОВ ИВАН ИВАНОВИЧ"></label>
+  <label id="registerNameZhRow"><span id="registerNameZhLabel">中文姓名</span><input id="registerNameZh" inputmode="text" autocapitalize="characters" spellcheck="false" autocomplete="name" placeholder="请输入中文姓名"></label>
   <label><span id="registerPhoneLabel">手机号码 / Телефон</span><input id="registerPhone" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="8XXXXXXXXXX"></label>
-  <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" inputmode="numeric" pattern="[0-9]*" minlength="8" autocomplete="new-password"></label>
-  <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" inputmode="numeric" pattern="[0-9]*" minlength="8" autocomplete="new-password"></label>
+  <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" inputmode="text" minlength="8" autocomplete="new-password"></label>
+  <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" inputmode="text" minlength="8" autocomplete="new-password"></label>
   <div id="registerHint" class="muted">个人编号使用您的 11 位手机号码，必须以 8 或 1 开头。</div>
   <div id="registerError" class="error hidden"></div>
   <div id="registerSuccess" class="notice hidden"></div>
@@ -103,7 +103,7 @@
 
 <dialog id="userDialog"><div class="dialog-card" id="userForm">
   <div class="dialog-head"><h3 id="newUserTitle">新建账户</h3><button type="button" class="icon-btn" data-close-dialog="userDialog">×</button></div>
-  <label><span id="newUserIdLabel">个人编号</span><input id="newEmployeeCode" inputmode="numeric" maxlength="11" autocomplete="off" required placeholder="8XXXXXXXXXX"></label>
+  <label><span id="newUserIdLabel">个人编号</span><input id="newEmployeeCode" inputmode="text" autocapitalize="characters" maxlength="40" autocomplete="off" required placeholder="8XXXXXXXXXX"></label>
   <label><span id="newUserRuLabel">俄文姓名</span><input id="newNameRu" autocomplete="off" placeholder="Моряхина Анна Владимировна"></label>
   <label><span id="newUserZhLabel">中文姓名</span><input id="newNameZh" autocomplete="off" placeholder="莫里亚希娜·安娜·弗拉基米罗夫娜"></label>
   <div id="newUserNotice" class="notice">新账户统一使用初始密码：<strong>12345678</strong></div>
@@ -127,8 +127,8 @@
 
 <dialog id="changePasswordDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="changePasswordTitle">修改密码</h3><button type="button" class="icon-btn" data-close-dialog="changePasswordDialog">×</button></div>
-  <label><span id="myNewPasswordLabel">新密码</span><input id="myNewPassword" type="password" inputmode="numeric" pattern="[0-9]*" minlength="8" autocomplete="new-password"></label>
-  <label><span id="myNewPassword2Label">再次输入新密码</span><input id="myNewPassword2" type="password" inputmode="numeric" pattern="[0-9]*" minlength="8" autocomplete="new-password"></label>
+  <label><span id="myNewPasswordLabel">新密码</span><input id="myNewPassword" type="password" inputmode="text" minlength="8" autocomplete="new-password"></label>
+  <label><span id="myNewPassword2Label">再次输入新密码</span><input id="myNewPassword2" type="password" inputmode="text" minlength="8" autocomplete="new-password"></label>
   <div id="myPasswordError" class="error hidden"></div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="changePasswordDialog" id="changePasswordCancelBtn">取消</button><button type="button" id="saveMyPassword" class="primary">保存新密码</button></div>
 </div></dialog>
@@ -146,7 +146,7 @@
 
 <dialog id="docDialog"><div class="dialog-card" id="docForm">
   <div class="dialog-head"><h3 id="newDocTitle">新建文件</h3><button type="button" class="icon-btn" data-close-dialog="docDialog">×</button></div>
-  <label><span id="selectTemplateLabel">选择模板</span><select id="docTemplate"></select></label>
+  <label><span id="selectTemplateLabel">选择模板或文件</span><select id="docTemplate"></select></label>
   <label><span id="docRuTitleLabel">俄文标题</span><input id="docTitleRu"></label>
   <label><span id="docZhTitleLabel">中文标题</span><input id="docTitleZh"></label>
   <button type="button" id="editDocDraftBtn" class="ghost wide">编辑本文件内容</button>
@@ -223,7 +223,7 @@
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script>
-// V20: fixed registration polling/correction notices, receipt inbox, and mobile-safe behavior.
+// V21: registration input rules, template/file source selector, date picker, simplified signing flow.
 (() => {
   const cfg=window.APP_CONFIG||{};
   if(!window.supabase?.createClient||!cfg.SUPABASE_URL||!cfg.SUPABASE_ANON_KEY) return;

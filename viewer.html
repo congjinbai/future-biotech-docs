@@ -34,7 +34,7 @@
  const context={profile:profile||{},payload:data.payload||{},document_id:id,admin_readonly:adminMode};
  let html=data.source_html;
  const ctxScript=`<script>window.FH_DOC_CONTEXT=${JSON.stringify(context).replace(/</g,'\\u003c')};<\/script>`;
- const injectedStyle=`<style id="fh-system-style">.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:block;max-width:680px;width:calc(100% - 24px);margin:12px auto 8px;text-align:center;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font:700 12px system-ui,-apple-system,sans-serif}div[style*="height:96px"][style*="border-bottom"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;border-bottom:1px solid #000;z-index:50;pointer-events:none}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>`;
+ const injectedStyle=`<style id="fh-system-style">.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:block;max-width:680px;width:calc(100% - 24px);margin:12px auto 8px;text-align:center;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font:700 12px system-ui,-apple-system,sans-serif}div[style*="height:96px"][style*="border-bottom"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;border-bottom:1px solid #000;z-index:50;pointer-events:none}#printDocBtn,#printImageBtn,#infoText,#submissionInfo{display:none!important}.fh-calendar-btn{border:1px solid #b7cbe3;background:#fff;border-radius:14px;padding:10px 13px;font-size:18px;line-height:1;cursor:pointer}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>`;
  const badge=adminMode?`<div class="fh-readonly-badge">${txt.readonly}</div>`:'';
  html=html.replace(/<body([^>]*)>/i,m=>m+ctxScript+injectedStyle+badge);
  const frame=document.getElementById('docFrame'),shell=document.getElementById('viewerShell'),status=document.getElementById('status'),back=document.getElementById('systemBack');
@@ -59,10 +59,29 @@
    try{new ResizeObserver(resize).observe(d.documentElement);new MutationObserver(resize).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true})}catch{}
    const sel=d.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=d.getElementById('languageLabel')||d.getElementById('toolbarLabel');if(lbl)lbl.style.display='none';let btn=d.getElementById('fhLangToggle');if(!btn){btn=d.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文';resize()};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}
    const refresh=d.getElementById('refreshBtn')||d.getElementById('refreshPageBtn');if(refresh){refresh.addEventListener('click',ev=>{ev.preventDefault();ev.stopImmediatePropagation();try{w.scrollTo({top:0,left:0,behavior:'smooth'})}catch(e){w.scrollTo(0,0)};try{window.scrollTo({top:0,left:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)};setTimeout(resize,40);setTimeout(resize,240)},true)}
+   // V21: date questions keep the numeric keyboard; long-press or the calendar button opens a native date picker.
+   const smartInput=d.getElementById('smartInput');
+   if(smartInput){
+     let cal=d.getElementById('calendarInput');
+     if(!cal){cal=d.createElement('input');cal.id='calendarInput';cal.type='date';cal.tabIndex=-1;cal.style.cssText='position:fixed;left:-10000px;top:-10000px;width:1px;height:1px;opacity:0';d.body.appendChild(cal)}
+     let calBtn=d.getElementById('calendarPickBtn');
+     if(!calBtn){calBtn=d.createElement('button');calBtn.type='button';calBtn.id='calendarPickBtn';calBtn.className='fh-calendar-btn';calBtn.textContent='📅';smartInput.insertAdjacentElement('afterend',calBtn)}
+     const isDateQuestion=()=>/ДД\.ММ\.ГГГГ|日\.月\.年|DD\.MM\.YYYY/i.test(smartInput.placeholder||'');
+     const syncCal=()=>{const digits=String(smartInput.value||'').replace(/\D/g,'');calBtn.style.display=isDateQuestion()?'inline-block':'none';if(/^\d{8}$/.test(digits))cal.value=`${digits.slice(4,8)}-${digits.slice(2,4)}-${digits.slice(0,2)}`;else cal.value=''};
+     const openCal=()=>{if(!isDateQuestion())return;syncCal();try{if(cal.showPicker)cal.showPicker();else cal.click()}catch(e){try{cal.click()}catch(_){}}};
+     calBtn.addEventListener('click',openCal);
+     cal.addEventListener('change',()=>{if(!cal.value)return;const [y,m,dd]=cal.value.split('-');smartInput.value=`${dd}.${m}.${y}`;smartInput.dispatchEvent(new Event('input',{bubbles:true}));smartInput.focus();resize()});
+     let lp=null;smartInput.addEventListener('pointerdown',()=>{if(!isDateQuestion())return;clearTimeout(lp);lp=setTimeout(openCal,650)});['pointerup','pointercancel','pointerleave'].forEach(ev=>smartInput.addEventListener(ev,()=>clearTimeout(lp)));
+     new MutationObserver(syncCal).observe(smartInput,{attributes:true,attributeFilter:['placeholder']});syncCal();
+   }
+   const oldFoot=d.getElementById('footnote');if(oldFoot&&/печати|печат|打印|创建图像/i.test(oldFoot.textContent||''))oldFoot.style.display='none';
+   const oldInfo=d.getElementById('infoText');if(oldInfo)oldInfo.style.display='none';
+   const oldPrint=d.getElementById('printDocBtn');if(oldPrint)oldPrint.style.display='none';
+   const oldPaper=d.getElementById('printImageBtn');if(oldPaper)oldPaper.style.display='none';
    if(!adminMode){
      const shareBtn=d.getElementById('shareImageBtn');
      if(shareBtn){
-       shareBtn.textContent=uiLang==='zh'?'📥 提交回执':'📥 Отправить расписку';
+       shareBtn.textContent=uiLang==='zh'?'提交并返回':'Отправить';
        shareBtn.addEventListener('click',async ev=>{
          ev.preventDefault();ev.stopImmediatePropagation();
          const img=d.querySelector('#imageContainer img');if(!img?.src)return;
@@ -76,8 +95,9 @@
            if(upErr)throw upErr;
            const {error:dbErr}=await sb.from('signed_receipts').insert({document_id:id,user_id:session.user.id,storage_path:path,file_name:fileName});
            if(dbErr)throw dbErr;
-           shareBtn.textContent=uiLang==='zh'?'✓ 已提交给管理员':'✓ Отправлено администратору';
+           shareBtn.textContent=uiLang==='zh'?'✓ 已提交，正在返回…':'✓ Отправлено. Возврат…';
            try{const AC=window.AudioContext||window.webkitAudioContext,ac=new AC(),o=ac.createOscillator(),g=ac.createGain();o.frequency.value=850;g.gain.value=.12;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.12);setTimeout(()=>ac.close(),300)}catch(e){}
+           setTimeout(()=>location.replace('./index.html'),650);
          }catch(e){shareBtn.disabled=false;shareBtn.textContent=old;alert(uiLang==='zh'?'提交失败，请重试。':'Не удалось отправить. Повторите попытку.');}
        },true);
      }
