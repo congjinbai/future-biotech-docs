@@ -14,7 +14,7 @@
     <h1 id="loginTitle">文件系统</h1>
     <form id="loginForm">
       <label><span class="label-head"><span id="loginIdLabel">个人编号</span><small id="loginIdHint" class="inline-hint">请输入手机号</small></span><input id="loginId" inputmode="numeric" autocomplete="username" required placeholder="8XXXXXXXXXX"></label>
-      <label><span id="loginPasswordLabel">密码</span><input id="password" type="password" autocomplete="current-password" required></label>
+      <label><span id="loginPasswordLabel">密码</span><input id="password" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" required></label>
       <button id="loginSubmitBtn" class="primary wide" type="submit">登录</button>
     </form>
     <button id="openRegisterBtn" type="button" class="ghost wide register-entry">注册</button>
@@ -84,17 +84,17 @@
 
 <dialog id="registerDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="registerTitle">注册</h3><button type="button" class="icon-btn" data-close-dialog="registerDialog">×</button></div>
-  <label id="registerNameRuRow"><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" autocomplete="name" placeholder="Иванов Иван Иванович"></label>
+  <label id="registerNameRuRow"><span id="registerNameRuLabel">俄文姓名</span><input id="registerNameRu" autocomplete="name" placeholder="ИВАНОВ ИВАН ИВАНОВИЧ"></label>
   <label id="registerNameZhRow"><span id="registerNameZhLabel">中文姓名</span><input id="registerNameZh" autocomplete="name" placeholder="请输入中文姓名"></label>
   <label><span id="registerPhoneLabel">手机号码 / Телефон</span><input id="registerPhone" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="8XXXXXXXXXX"></label>
-  <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" minlength="8" autocomplete="new-password"></label>
-  <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" minlength="8" autocomplete="new-password"></label>
+  <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" inputmode="numeric" pattern="[0-9]*" minlength="8" autocomplete="new-password"></label>
+  <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" inputmode="numeric" pattern="[0-9]*" minlength="8" autocomplete="new-password"></label>
   <div id="registerHint" class="muted">个人编号使用您的 11 位手机号码，必须以 8 或 1 开头。</div>
   <div id="registerError" class="error hidden"></div>
   <div id="registerSuccess" class="notice hidden"></div>
   <div id="registrationWaitingControls" class="hidden" style="margin-top:12px">
     <button type="button" id="registrationRefreshBtn" class="primary wide">↻ 更新</button>
-    <p id="registrationRefreshHint" class="muted" style="margin:10px 4px 0;line-height:1.55;text-align:center">请手动更新界面。管理员通过验证后，更新即可自动进入系统。</p>
+    <p id="registrationRefreshHint" class="muted" style="margin:10px 4px 0;line-height:1.55;text-align:center">请点击“更新”检查审核状态。请不要完全退出系统；保持此页面打开，管理员通过审核后可第一时间收到提示并自动进入系统。</p>
   </div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="registerDialog" id="registerCancelBtn">取消</button><button type="button" id="registerConfirmBtn" class="primary">注册</button></div>
 </div></dialog>
@@ -125,8 +125,8 @@
 
 <dialog id="changePasswordDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="changePasswordTitle">修改密码</h3><button type="button" class="icon-btn" data-close-dialog="changePasswordDialog">×</button></div>
-  <label><span id="myNewPasswordLabel">新密码</span><input id="myNewPassword" type="password" minlength="8" autocomplete="new-password"></label>
-  <label><span id="myNewPassword2Label">再次输入新密码</span><input id="myNewPassword2" type="password" minlength="8" autocomplete="new-password"></label>
+  <label><span id="myNewPasswordLabel">新密码</span><input id="myNewPassword" type="password" inputmode="numeric" pattern="[0-9]*" minlength="8" autocomplete="new-password"></label>
+  <label><span id="myNewPassword2Label">再次输入新密码</span><input id="myNewPassword2" type="password" inputmode="numeric" pattern="[0-9]*" minlength="8" autocomplete="new-password"></label>
   <div id="myPasswordError" class="error hidden"></div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="changePasswordDialog" id="changePasswordCancelBtn">取消</button><button type="button" id="saveMyPassword" class="primary">保存新密码</button></div>
 </div></dialog>
@@ -254,7 +254,7 @@
   function startWait(){if(waitTimer)return;checkApproval();waitTimer=setInterval(checkApproval,2000)}
   function maybeStartWait(){const s=document.getElementById('registerSuccess');if(s&&!s.classList.contains('hidden')&&s.textContent.trim())startWait()}
   document.getElementById('registerConfirmBtn')?.addEventListener('pointerdown',()=>{unlockAudio();requestNotification()},{passive:true});
-  document.getElementById('registrationRefreshBtn')?.addEventListener('click',()=>{unlockAudio();checkApproval().then(()=>{if(!approvedHandled)location.reload()})});
+  document.getElementById('registrationRefreshBtn')?.addEventListener('click',async()=>{unlockAudio();await checkApproval();if(!approvedHandled){const success=document.getElementById('registerSuccess');if(success){success.textContent=ru()?'Заявка всё ещё находится на проверке. Оставьте эту страницу открытой и нажмите «Обновить» позже.':'注册申请仍在审核中。请保持此页面打开，稍后再次点击“更新”。';success.classList.remove('hidden')}}});
   new MutationObserver(maybeStartWait).observe(document.body,{subtree:true,childList:true,attributes:true,characterData:true});
   window.addEventListener('pageshow',()=>{maybeStartWait();checkApproval()});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkApproval()});
