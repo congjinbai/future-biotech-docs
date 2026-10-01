@@ -35,7 +35,7 @@
  const context={profile:profile||{},payload:data.payload||{},document_id:id,admin_readonly:adminMode};
  let html=data.source_html;
  const ctxScript=`<script>window.FH_DOC_CONTEXT=${JSON.stringify(context).replace(/</g,'\\u003c')};<\/script>`;
- const injectedStyle=`<style id="fh-system-style">.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:block;max-width:680px;width:calc(100% - 24px);margin:12px auto 8px;text-align:center;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font:700 12px system-ui,-apple-system,sans-serif}div[style*="height:96px"][style*="border-bottom"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;border-bottom:1px solid #000;z-index:50;pointer-events:none}#printDocBtn,#printImageBtn,#infoText,#submissionInfo{display:none!important}.fh-calendar-btn{border:1px solid #b7cbe3;background:#fff;border-radius:14px;padding:10px 13px;font-size:18px;line-height:1;cursor:pointer}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>`;
+ const injectedStyle=`<style id="fh-system-style">.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}.fh-readonly-badge{display:block;max-width:680px;width:calc(100% - 24px);margin:12px auto 8px;text-align:center;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font:700 12px system-ui,-apple-system,sans-serif}div[style*="height:96px"][style*="border-bottom"]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;border-bottom:1px solid #000;z-index:50;pointer-events:none}#printDocBtn,#printImageBtn,#infoText,#submissionInfo,#completionMessage{display:none!important}${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}</style>`;
  const badge=adminMode?`<div class="fh-readonly-badge">${txt.readonly}</div>`:'';
  html=html.replace(/<body([^>]*)>/i,m=>m+ctxScript+injectedStyle+badge);
  const frame=document.getElementById('docFrame'),shell=document.getElementById('viewerShell'),status=document.getElementById('status'),back=document.getElementById('systemBack');
@@ -58,26 +58,13 @@
    }catch{}};
    resize();setTimeout(resize,120);setTimeout(resize,450);setTimeout(resize,1000);
    try{new ResizeObserver(resize).observe(d.documentElement);new MutationObserver(resize).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true})}catch{}
-   const sel=d.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=d.getElementById('languageLabel')||d.getElementById('toolbarLabel');if(lbl)lbl.style.display='none';let btn=d.getElementById('fhLangToggle');if(!btn){btn=d.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文';resize()};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}
+   const sel=d.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=d.getElementById('languageLabel')||d.getElementById('toolbarLabel');if(lbl)lbl.style.display='none';let btn=d.getElementById('fhLangToggle');if(!btn){btn=d.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';const r=d.getElementById('refreshBtn')||d.getElementById('refreshPageBtn');if(r&&r.parentElement===sel.parentElement)r.insertAdjacentElement('beforebegin',btn);else sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文';resize()};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}
    const refresh=d.getElementById('refreshBtn')||d.getElementById('refreshPageBtn');if(refresh){refresh.addEventListener('click',ev=>{ev.preventDefault();ev.stopImmediatePropagation();try{window.scrollTo({top:0,left:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)};frame.srcdoc=html},true)}
-   // V22: date entry supports numeric typing plus a visible calendar dialog.
-   const smartInput=d.getElementById('smartInput');
-   if(smartInput){
-     let calBtn=d.getElementById('calendarPickBtn');
-     if(!calBtn){calBtn=d.createElement('button');calBtn.type='button';calBtn.id='calendarPickBtn';calBtn.className='fh-calendar-btn';calBtn.textContent='📅';smartInput.insertAdjacentElement('afterend',calBtn)}
-     let dlg=d.getElementById('fhCalendarDialog');
-     if(!dlg){dlg=d.createElement('dialog');dlg.id='fhCalendarDialog';dlg.style.cssText='border:0;border-radius:18px;padding:0;max-width:340px;width:calc(100% - 32px);box-shadow:0 18px 60px rgba(0,0,0,.28)';dlg.innerHTML=`<div style="padding:20px;font-family:system-ui,-apple-system,sans-serif"><div style="font-size:18px;font-weight:800;margin-bottom:14px">${uiLang==='zh'?'选择日期':'Выберите дату'}</div><input id="fhCalendarDate" type="date" style="width:100%;font-size:18px;padding:12px;border:1px solid #b7cbe3;border-radius:12px"><div style="display:flex;gap:10px;margin-top:16px"><button type="button" id="fhCalendarCancel" style="flex:1;padding:11px;border:1px solid #b7cbe3;background:#fff;border-radius:12px">${uiLang==='zh'?'取消':'Отмена'}</button><button type="button" id="fhCalendarOk" style="flex:1;padding:11px;border:0;background:#1a4e7a;color:#fff;border-radius:12px;font-weight:700">${uiLang==='zh'?'确认':'Готово'}</button></div></div>`;d.body.appendChild(dlg)}
-     const dateEl=dlg.querySelector('#fhCalendarDate');
-     const isDateQuestion=()=>/ДД\.ММ\.ГГГГ|日\.月\.年|DD\.MM\.YYYY/i.test(smartInput.placeholder||'');
-     const prep=()=>{const digits=String(smartInput.value||'').replace(/\D/g,'');if(/^\d{8}$/.test(digits))dateEl.value=`${digits.slice(4,8)}-${digits.slice(2,4)}-${digits.slice(0,2)}`;else dateEl.value=''};
-     const openCal=()=>{if(!isDateQuestion())return;prep();try{dlg.showModal()}catch(e){dlg.setAttribute('open','')}};
-     const syncCal=()=>{calBtn.style.display=isDateQuestion()?'inline-block':'none'};
-     calBtn.addEventListener('click',openCal);
-     dlg.querySelector('#fhCalendarCancel').addEventListener('click',()=>dlg.close());
-     dlg.querySelector('#fhCalendarOk').addEventListener('click',()=>{if(dateEl.value){const [y,m,dd]=dateEl.value.split('-');smartInput.value=`${dd}.${m}.${y}`;smartInput.dispatchEvent(new Event('input',{bubbles:true}))}dlg.close();smartInput.focus();resize()});
-     let lp=null;smartInput.addEventListener('pointerdown',()=>{if(!isDateQuestion())return;clearTimeout(lp);lp=setTimeout(openCal,650)});['pointerup','pointercancel','pointerleave'].forEach(ev=>smartInput.addEventListener(ev,()=>clearTimeout(lp)));
-     new MutationObserver(syncCal).observe(smartInput,{attributes:true,attributeFilter:['placeholder']});syncCal();
-   }
+   // V23: date entry uses numeric typing only. Calendar control removed for mobile reliability.
+   const oldCal=d.getElementById('calendarPickBtn');if(oldCal)oldCal.remove();const oldCalInput=d.getElementById('calendarInput');if(oldCalInput)oldCalInput.remove();
+   const prog=d.getElementById('smartProgress'),nextBtn=d.getElementById('smartNextBtn'),smartInp=d.getElementById('smartInput');if(prog&&nextBtn){const oldRow=nextBtn.parentElement;if(oldRow&&smartInp&&oldRow.contains(smartInp)){let nr=d.getElementById('fhSmartNextRow');if(!nr){nr=d.createElement('div');nr.id='fhSmartNextRow';nr.style.marginTop='10px';prog.insertAdjacentElement('afterend',nr)}nr.appendChild(nextBtn);nextBtn.style.width='100%';nextBtn.style.padding='12px 14px'}else{const row=nextBtn.parentElement;if(row){if(row.previousElementSibling!==prog)prog.insertAdjacentElement('afterend',row);row.style.marginTop='10px';nextBtn.style.width='100%';nextBtn.style.padding='12px 14px'}}}
+   const clearSig=d.getElementById('clearSignatureBtn'),confirmSig=d.getElementById('confirmSignatureBtn');if(clearSig&&confirmSig&&clearSig.compareDocumentPosition(confirmSig)&Node.DOCUMENT_POSITION_FOLLOWING){clearSig.parentElement?.insertBefore(confirmSig,clearSig)}
+   const createImg=d.getElementById('createImageBtn');if(createImg){const sty=d.createElement('style');sty.textContent='#createImageBtn:disabled{background:#cfd5dc!important;color:#f7f8fa!important;opacity:1!important}';d.head.appendChild(sty)}
    const oldFoot=d.getElementById('footnote');if(oldFoot&&/печати|печат|打印|创建图像/i.test(oldFoot.textContent||''))oldFoot.style.display='none';
    const oldInfo=d.getElementById('infoText');if(oldInfo)oldInfo.style.display='none';
    const oldPrint=d.getElementById('printDocBtn');if(oldPrint)oldPrint.style.display='none';
@@ -85,11 +72,13 @@
    if(!adminMode){
      const shareBtn=d.getElementById('shareImageBtn');
      if(shareBtn){
-       shareBtn.textContent=uiLang==='zh'?'提交':'Отправить';
+       const submitIsZh=()=>((d.getElementById('languageSelect')?.value)||uiLang)==='zh';
+       const setSubmitLabel=()=>{if(!shareBtn.disabled)shareBtn.textContent=submitIsZh()?'提交':'Отправить'};
+       setSubmitLabel();d.getElementById('languageSelect')?.addEventListener('change',()=>setTimeout(setSubmitLabel,0));
        shareBtn.addEventListener('click',async ev=>{
          ev.preventDefault();ev.stopImmediatePropagation();
          const img=d.querySelector('#imageContainer img');if(!img?.src)return;
-         const old=shareBtn.textContent;shareBtn.disabled=true;shareBtn.textContent=uiLang==='zh'?'正在提交…':'Отправка…';
+         const old=shareBtn.textContent;const zh=submitIsZh();shareBtn.disabled=true;shareBtn.textContent=zh?'正在提交…':'Отправка…';
          try{
            const blob=await(await fetch(img.src)).blob();
            const stamp=new Date().toISOString().replace(/[:.]/g,'-');
@@ -99,10 +88,10 @@
            if(upErr)throw upErr;
            const {error:dbErr}=await sb.from('signed_receipts').insert({document_id:id,user_id:session.user.id,storage_path:path,file_name:fileName});
            if(dbErr)throw dbErr;
-           shareBtn.textContent=uiLang==='zh'?'✓ 已提交':'✓ Отправлено';
+           shareBtn.textContent=zh?'✓ 已提交':'✓ Отправлено';
            try{const AC=window.AudioContext||window.webkitAudioContext,ac=new AC(),o=ac.createOscillator(),g=ac.createGain();o.frequency.value=850;g.gain.value=.12;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.12);setTimeout(()=>ac.close(),300)}catch(e){}
            await showSubmitSuccess();location.replace('./index.html');
-         }catch(e){shareBtn.disabled=false;shareBtn.textContent=old;alert(uiLang==='zh'?'提交失败，请重试。':'Не удалось отправить. Повторите попытку.');}
+         }catch(e){shareBtn.disabled=false;shareBtn.textContent=old;alert(submitIsZh()?'提交失败，请重试。':'Не удалось отправить. Повторите попытку.');}
        },true);
      }
    }
