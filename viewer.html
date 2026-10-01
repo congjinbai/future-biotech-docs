@@ -5,7 +5,7 @@
 (async()=>{
  const cfg=window.APP_CONFIG,sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
  const uiLang=(localStorage.getItem('fh_ui_lang')||localStorage.getItem('fb_ui_lang')||'zh')==='ru'?'ru':'zh';
- const txt=uiLang==='zh'?{opening:'正在验证权限并打开文件…',missing:'缺少文件编号。',denied:'没有权限查看此文件，或文件不存在。',nosource:'该文件尚未导入原始源代码。',backAdmin:'返回文件管理',backUser:'返回我的文件',readonly:'管理员只读查看',bottomUser:'退出文件，返回文件列表'}:{opening:'Проверка доступа и открытие документа…',missing:'Не указан номер документа.',denied:'Нет доступа к документу или документ не существует.',nosource:'Исходный код этого документа ещё не загружен.',backAdmin:'Вернуться к документам',backUser:'Вернуться к моим документам',readonly:'Просмотр администратора: только чтение',bottomUser:'Выйти из документа и вернуться к списку'};
+ const txt=uiLang==='zh'?{opening:'正在验证权限并打开文件…',missing:'缺少文件编号。',denied:'没有权限查看此文件，或文件不存在。',nosource:'该文件尚未导入原始源代码。',backAdmin:'返回',backUser:'返回',readonly:'管理员只读查看',bottomUser:'退出文件，返回文件列表'}:{opening:'Проверка доступа и открытие документа…',missing:'Не указан номер документа.',denied:'Нет доступа к документу или документ не существует.',nosource:'Исходный код этого документа ещё не загружен.',backAdmin:'Назад',backUser:'Назад',readonly:'Просмотр администратора: только чтение',bottomUser:'Выйти из документа и вернуться к списку'};
  document.documentElement.lang=uiLang==='zh'?'zh-CN':'ru';document.getElementById('status').textContent=txt.opening;
  const qs=new URLSearchParams(location.search),id=qs.get('id'),requestedAdmin=qs.get('mode')==='admin';
  const {data:{session}}=await sb.auth.getSession(); if(!session){location.replace('./');return}
@@ -16,10 +16,10 @@
  if(error||!data){document.getElementById('status').innerHTML='<span class="err">'+txt.denied+'</span>';return}
  if(!data.source_html){document.getElementById('status').innerHTML='<span class="err">'+txt.nosource+'</span>';return}
  const fallback=adminMode?'./#documents':'./';
- const backAction=`if(history.length>1){history.back()}else{location.href='${fallback}'}`;
+ const backAction=`location.href='${fallback}'`;
  const nav=`<style id="fh-system-style">
  .fh-system-nav{position:fixed;left:10px;top:10px;z-index:2147483647;display:flex;gap:8px;align-items:center;font-family:system-ui,-apple-system,sans-serif}
- .fh-system-nav button{border:0;border-radius:999px;padding:9px 13px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer}
+ .fh-system-nav button{border:0;border-radius:999px;padding:9px 13px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer}.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}
  .fh-readonly-badge{background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}
  ${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}
  </style><div class="fh-system-nav"><button type="button" onclick="${backAction}">← ${adminMode?txt.backAdmin:txt.backUser}</button>${adminMode?`<span class="fh-readonly-badge">${txt.readonly}</span>`:''}</div>`;
@@ -28,6 +28,7 @@
  html=html.replace(/<body([^>]*)>/i,m=>m+nav);
  html=html.replace(/<\/body>/i,bottom+'</body>');
  document.open();document.write(html);document.close();
- if(adminMode){setTimeout(()=>{document.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.closest('.fh-system-nav'))return;if(el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true;});},120)}
+ setTimeout(()=>{const sel=document.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=document.getElementById('languageLabel');if(lbl)lbl.style.display='none';let btn=document.getElementById('fhLangToggle');if(!btn){btn=document.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文'};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}},120);
+ if(adminMode){setTimeout(()=>{document.querySelectorAll('input,textarea,select,button').forEach(el=>{if(el.closest('.fh-system-nav')||el.id==='fhLangToggle')return;if(el.id==='languageSelect'||el.id==='refreshBtn'||el.id==='refreshPageBtn')return;el.disabled=true;});},180)}
 })();
 </script></body></html>

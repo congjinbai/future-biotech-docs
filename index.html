@@ -64,6 +64,7 @@
       </section>
 
       <section id="tab-users" class="panel admin-tab hidden">
+        <div id="pendingRegistrationsBox" class="pending-box hidden"></div>
         <div class="section-head">
           <div><h2 id="usersTitle">账户</h2><p id="usersHint" class="muted">可修改账户名称并重置密码。</p></div>
           <button id="newUserBtn" type="button" class="primary">＋ 新建账户</button>
@@ -77,9 +78,10 @@
 <dialog id="registerDialog"><div class="dialog-card">
   <div class="dialog-head"><h3 id="registerTitle">注册</h3><button type="button" class="icon-btn" data-close-dialog="registerDialog">×</button></div>
   <label><span id="registerNameLabel">姓名</span><input id="registerName" autocomplete="name" placeholder="Моряхина Анна Владимировна"></label>
+  <label><span id="registerPhoneLabel">手机号码 / Телефон</span><input id="registerPhone" inputmode="numeric" maxlength="11" autocomplete="tel" placeholder="8XXXXXXXXXX"></label>
   <label><span id="registerPasswordLabel">密码</span><input id="registerPassword" type="password" minlength="8" autocomplete="new-password"></label>
   <label><span id="registerPassword2Label">确认密码</span><input id="registerPassword2" type="password" minlength="8" autocomplete="new-password"></label>
-  <div id="registerHint" class="muted">个人编号将根据姓名和现有账户数量自动生成。</div>
+  <div id="registerHint" class="muted">个人编号使用您的 11 位手机号码，必须以 8 或 1 开头。</div>
   <div id="registerError" class="error hidden"></div>
   <div id="registerSuccess" class="notice hidden"></div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="registerDialog" id="registerCancelBtn">取消</button><button type="button" id="registerConfirmBtn" class="primary">注册</button></div>
@@ -87,7 +89,7 @@
 
 <dialog id="userDialog"><div class="dialog-card" id="userForm">
   <div class="dialog-head"><h3 id="newUserTitle">新建账户</h3><button type="button" class="icon-btn" data-close-dialog="userDialog">×</button></div>
-  <label><span id="newUserIdLabel">个人编号</span><input id="newEmployeeCode" autocomplete="off" required placeholder="ANNA001"></label>
+  <label><span id="newUserIdLabel">个人编号</span><input id="newEmployeeCode" inputmode="numeric" maxlength="11" autocomplete="off" required placeholder="8XXXXXXXXXX"></label>
   <label><span id="newUserRuLabel">俄文姓名</span><input id="newNameRu" autocomplete="off" placeholder="Моряхина Анна Владимировна"></label>
   <label><span id="newUserZhLabel">中文姓名</span><input id="newNameZh" autocomplete="off" placeholder="莫里亚希娜·安娜·弗拉基米罗夫娜"></label>
   <div id="newUserNotice" class="notice">新账户统一使用初始密码：<strong>12345678</strong></div>
