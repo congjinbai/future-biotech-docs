@@ -1,6 +1,6 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FUTURE HEALTH</title>
 <style>
-*{box-sizing:border-box}body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eef2f7;margin:0;color:#17324d}.status-box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08);text-align:center}.err{color:#b42318}.viewer-shell{width:100%;max-width:760px;margin:0 auto;padding:10px 0 14px}.viewer-frame{display:block;width:100%;border:0;background:transparent;min-height:420px}.system-footer{width:calc(100% - 24px);max-width:680px;margin:6px auto 18px;text-align:center;position:relative;z-index:99999}.system-back{display:block;width:100%;text-decoration:none;border:0;border-radius:16px;padding:13px 22px;background:#0b4f86;color:#fff;font-weight:750;font-size:15px;box-shadow:0 4px 14px rgba(11,79,134,.18)}@media(max-width:720px){.viewer-shell{padding-top:0}.system-footer{margin-top:6px;margin-bottom:14px}}
+*{box-sizing:border-box}body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#eef2f7;margin:0;color:#17324d}.status-box{max-width:560px;margin:15vh auto;background:#fff;padding:28px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,.08);text-align:center}.err{color:#b42318}.viewer-shell{width:100%;max-width:760px;margin:0 auto;padding:10px 0 14px}.viewer-frame{display:block;width:100%;border:0;background:transparent;min-height:420px}.system-footer{width:calc(100% - 24px);max-width:680px;margin:6px auto 18px;text-align:center;position:relative;z-index:99999}.system-back{display:block;width:100%;text-decoration:none;border:0;border-radius:16px;padding:13px 22px;background:#0b4f86;color:#fff;font-weight:750;font-size:15px;box-shadow:0 4px 14px rgba(11,79,134,.18)}.submit-ok-dialog{border:0;border-radius:20px;padding:0;max-width:420px;width:calc(100% - 32px);box-shadow:0 20px 70px rgba(0,0,0,.3)}.submit-ok-card{padding:24px;font-family:system-ui,-apple-system,sans-serif;text-align:center}.submit-ok-card h3{margin:0 0 10px;font-size:21px}.submit-ok-card p{margin:0 0 20px;line-height:1.55;color:#40556b}.submit-ok-card button{width:100%;border:0;border-radius:14px;padding:12px;background:#0b4f86;color:#fff;font-weight:800;font-size:16px}@media(max-width:720px){.viewer-shell{padding-top:0}.system-footer{margin-top:6px;margin-bottom:14px}}
 </style></head>
 <body>
 <div class="status-box" id="status"></div>
@@ -8,17 +8,18 @@
   <iframe id="docFrame" class="viewer-frame" title="FUTURE HEALTH document" scrolling="no"></iframe>
   <div class="system-footer"><a id="systemBack" class="system-back" href="./">返回</a></div>
 </div>
+<dialog id="submitSuccessDialog" class="submit-ok-dialog"><div class="submit-ok-card"><h3 id="submitSuccessTitle">提交成功</h3><p id="submitSuccessText">已成功提交，返回主页。</p><button type="button" id="submitSuccessOk">确认</button></div></dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script>
 (async()=>{
  const cfg=window.APP_CONFIG,sb=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
  const uiLang=(localStorage.getItem('fh_ui_lang')||localStorage.getItem('fb_ui_lang')||'zh')==='ru'?'ru':'zh';
  const txt=uiLang==='zh'?{opening:'正在验证权限并打开文件…',missing:'缺少文件编号。',denied:'没有权限查看此文件，或文件不存在。',nosource:'该文件尚未导入原始源代码。',back:'返回',readonly:'管理员只读查看'}:{opening:'Проверка доступа и открытие документа…',missing:'Не указан номер документа.',denied:'Нет доступа к документу или документ не существует.',nosource:'Исходный код этого документа ещё не загружен.',back:'Назад',readonly:'Просмотр администратора: только чтение'};
- document.documentElement.lang=uiLang==='zh'?'zh-CN':'ru';document.getElementById('status').textContent=txt.opening;
+ document.documentElement.lang=uiLang==='zh'?'zh-CN':'ru';document.getElementById('status').textContent=txt.opening;const successDlg=document.getElementById('submitSuccessDialog'),successTitle=document.getElementById('submitSuccessTitle'),successText=document.getElementById('submitSuccessText'),successOk=document.getElementById('submitSuccessOk');if(successTitle)successTitle.textContent=uiLang==='zh'?'提交成功':'Отправлено';if(successText)successText.textContent=uiLang==='zh'?'已成功提交，返回主页。':'Документ успешно отправлен. Возврат на главную страницу.';if(successOk)successOk.textContent=uiLang==='zh'?'确认':'ОК';const showSubmitSuccess=()=>new Promise(resolve=>{if(!successDlg||!successOk){alert(uiLang==='zh'?'已成功提交，返回主页。':'Документ успешно отправлен. Возврат на главную страницу.');resolve();return}const done=()=>{successOk.removeEventListener('click',done);try{successDlg.close()}catch(e){successDlg.removeAttribute('open')}resolve()};successOk.addEventListener('click',done);try{successDlg.showModal()}catch(e){successDlg.setAttribute('open','')}});
  const qs=new URLSearchParams(location.search),id=qs.get('id'),requestedAdmin=qs.get('mode')==='admin';
  const {data:{session}}=await sb.auth.getSession();if(!session){location.replace('./');return}
  if(!id){document.getElementById('status').innerHTML='<span class="err">'+txt.missing+'</span>';return}
  let adminMode=false;
- if(requestedAdmin){const {data:p}=await sb.from('profiles').select('is_admin').eq('id',session.user.id).single();adminMode=!!p?.is_admin}
+ if(requestedAdmin){const {data:p}=await sb.from('profiles').select('is_admin,account_role').eq('id',session.user.id).single();adminMode=!!(p?.is_admin||['admin','manager'].includes(p?.account_role))}
  const {data,error}=await sb.from('documents').select('id,source_html,title_ru,title_zh,payload').eq('id',id).single();
  if(error||!data){document.getElementById('status').innerHTML='<span class="err">'+txt.denied+'</span>';return}
  if(!data.source_html){document.getElementById('status').innerHTML='<span class="err">'+txt.nosource+'</span>';return}
@@ -58,19 +59,22 @@
    resize();setTimeout(resize,120);setTimeout(resize,450);setTimeout(resize,1000);
    try{new ResizeObserver(resize).observe(d.documentElement);new MutationObserver(resize).observe(d.documentElement,{subtree:true,childList:true,attributes:true,characterData:true})}catch{}
    const sel=d.getElementById('languageSelect');if(sel){sel.style.display='none';const lbl=d.getElementById('languageLabel')||d.getElementById('toolbarLabel');if(lbl)lbl.style.display='none';let btn=d.getElementById('fhLangToggle');if(!btn){btn=d.createElement('button');btn.type='button';btn.id='fhLangToggle';btn.className='fh-lang-toggle';sel.parentElement?.appendChild(btn)}const sync=()=>{btn.textContent=sel.value==='zh'?'RU':'中文';resize()};sync();btn.onclick=()=>{sel.value=sel.value==='zh'?'ru':'zh';sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(sync,0)}}
-   const refresh=d.getElementById('refreshBtn')||d.getElementById('refreshPageBtn');if(refresh){refresh.addEventListener('click',ev=>{ev.preventDefault();ev.stopImmediatePropagation();try{w.scrollTo({top:0,left:0,behavior:'smooth'})}catch(e){w.scrollTo(0,0)};try{window.scrollTo({top:0,left:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)};setTimeout(resize,40);setTimeout(resize,240)},true)}
-   // V21: date questions keep the numeric keyboard; long-press or the calendar button opens a native date picker.
+   const refresh=d.getElementById('refreshBtn')||d.getElementById('refreshPageBtn');if(refresh){refresh.addEventListener('click',ev=>{ev.preventDefault();ev.stopImmediatePropagation();try{window.scrollTo({top:0,left:0,behavior:'smooth'})}catch(e){window.scrollTo(0,0)};frame.srcdoc=html},true)}
+   // V22: date entry supports numeric typing plus a visible calendar dialog.
    const smartInput=d.getElementById('smartInput');
    if(smartInput){
-     let cal=d.getElementById('calendarInput');
-     if(!cal){cal=d.createElement('input');cal.id='calendarInput';cal.type='date';cal.tabIndex=-1;cal.style.cssText='position:fixed;left:-10000px;top:-10000px;width:1px;height:1px;opacity:0';d.body.appendChild(cal)}
      let calBtn=d.getElementById('calendarPickBtn');
      if(!calBtn){calBtn=d.createElement('button');calBtn.type='button';calBtn.id='calendarPickBtn';calBtn.className='fh-calendar-btn';calBtn.textContent='📅';smartInput.insertAdjacentElement('afterend',calBtn)}
+     let dlg=d.getElementById('fhCalendarDialog');
+     if(!dlg){dlg=d.createElement('dialog');dlg.id='fhCalendarDialog';dlg.style.cssText='border:0;border-radius:18px;padding:0;max-width:340px;width:calc(100% - 32px);box-shadow:0 18px 60px rgba(0,0,0,.28)';dlg.innerHTML=`<div style="padding:20px;font-family:system-ui,-apple-system,sans-serif"><div style="font-size:18px;font-weight:800;margin-bottom:14px">${uiLang==='zh'?'选择日期':'Выберите дату'}</div><input id="fhCalendarDate" type="date" style="width:100%;font-size:18px;padding:12px;border:1px solid #b7cbe3;border-radius:12px"><div style="display:flex;gap:10px;margin-top:16px"><button type="button" id="fhCalendarCancel" style="flex:1;padding:11px;border:1px solid #b7cbe3;background:#fff;border-radius:12px">${uiLang==='zh'?'取消':'Отмена'}</button><button type="button" id="fhCalendarOk" style="flex:1;padding:11px;border:0;background:#1a4e7a;color:#fff;border-radius:12px;font-weight:700">${uiLang==='zh'?'确认':'Готово'}</button></div></div>`;d.body.appendChild(dlg)}
+     const dateEl=dlg.querySelector('#fhCalendarDate');
      const isDateQuestion=()=>/ДД\.ММ\.ГГГГ|日\.月\.年|DD\.MM\.YYYY/i.test(smartInput.placeholder||'');
-     const syncCal=()=>{const digits=String(smartInput.value||'').replace(/\D/g,'');calBtn.style.display=isDateQuestion()?'inline-block':'none';if(/^\d{8}$/.test(digits))cal.value=`${digits.slice(4,8)}-${digits.slice(2,4)}-${digits.slice(0,2)}`;else cal.value=''};
-     const openCal=()=>{if(!isDateQuestion())return;syncCal();try{if(cal.showPicker)cal.showPicker();else cal.click()}catch(e){try{cal.click()}catch(_){}}};
+     const prep=()=>{const digits=String(smartInput.value||'').replace(/\D/g,'');if(/^\d{8}$/.test(digits))dateEl.value=`${digits.slice(4,8)}-${digits.slice(2,4)}-${digits.slice(0,2)}`;else dateEl.value=''};
+     const openCal=()=>{if(!isDateQuestion())return;prep();try{dlg.showModal()}catch(e){dlg.setAttribute('open','')}};
+     const syncCal=()=>{calBtn.style.display=isDateQuestion()?'inline-block':'none'};
      calBtn.addEventListener('click',openCal);
-     cal.addEventListener('change',()=>{if(!cal.value)return;const [y,m,dd]=cal.value.split('-');smartInput.value=`${dd}.${m}.${y}`;smartInput.dispatchEvent(new Event('input',{bubbles:true}));smartInput.focus();resize()});
+     dlg.querySelector('#fhCalendarCancel').addEventListener('click',()=>dlg.close());
+     dlg.querySelector('#fhCalendarOk').addEventListener('click',()=>{if(dateEl.value){const [y,m,dd]=dateEl.value.split('-');smartInput.value=`${dd}.${m}.${y}`;smartInput.dispatchEvent(new Event('input',{bubbles:true}))}dlg.close();smartInput.focus();resize()});
      let lp=null;smartInput.addEventListener('pointerdown',()=>{if(!isDateQuestion())return;clearTimeout(lp);lp=setTimeout(openCal,650)});['pointerup','pointercancel','pointerleave'].forEach(ev=>smartInput.addEventListener(ev,()=>clearTimeout(lp)));
      new MutationObserver(syncCal).observe(smartInput,{attributes:true,attributeFilter:['placeholder']});syncCal();
    }
@@ -81,7 +85,7 @@
    if(!adminMode){
      const shareBtn=d.getElementById('shareImageBtn');
      if(shareBtn){
-       shareBtn.textContent=uiLang==='zh'?'提交并返回':'Отправить';
+       shareBtn.textContent=uiLang==='zh'?'提交':'Отправить';
        shareBtn.addEventListener('click',async ev=>{
          ev.preventDefault();ev.stopImmediatePropagation();
          const img=d.querySelector('#imageContainer img');if(!img?.src)return;
@@ -95,9 +99,9 @@
            if(upErr)throw upErr;
            const {error:dbErr}=await sb.from('signed_receipts').insert({document_id:id,user_id:session.user.id,storage_path:path,file_name:fileName});
            if(dbErr)throw dbErr;
-           shareBtn.textContent=uiLang==='zh'?'✓ 已提交，正在返回…':'✓ Отправлено. Возврат…';
+           shareBtn.textContent=uiLang==='zh'?'✓ 已提交':'✓ Отправлено';
            try{const AC=window.AudioContext||window.webkitAudioContext,ac=new AC(),o=ac.createOscillator(),g=ac.createGain();o.frequency.value=850;g.gain.value=.12;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.12);setTimeout(()=>ac.close(),300)}catch(e){}
-           setTimeout(()=>location.replace('./index.html'),650);
+           await showSubmitSuccess();location.replace('./index.html');
          }catch(e){shareBtn.disabled=false;shareBtn.textContent=old;alert(uiLang==='zh'?'提交失败，请重试。':'Не удалось отправить. Повторите попытку.');}
        },true);
      }
