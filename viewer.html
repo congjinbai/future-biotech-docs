@@ -15,15 +15,14 @@
  const {data,error}=await sb.from('documents').select('id,source_html,title_ru,title_zh').eq('id',id).single();
  if(error||!data){document.getElementById('status').innerHTML='<span class="err">'+txt.denied+'</span>';return}
  if(!data.source_html){document.getElementById('status').innerHTML='<span class="err">'+txt.nosource+'</span>';return}
- const fallback=adminMode?'./#documents':'./';
- const backAction=`location.href='${fallback}'`;
+ const backHref=adminMode?'./index.html#documents':'./index.html';
  const nav=`<style id="fh-system-style">
- .fh-system-nav{position:fixed;left:10px;top:10px;z-index:2147483647;display:flex;gap:8px;align-items:center;font-family:system-ui,-apple-system,sans-serif}
- .fh-system-nav button{border:0;border-radius:999px;padding:9px 13px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer}.fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}
- .fh-readonly-badge{background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}
+ .fh-system-strip{max-width:680px;width:calc(100% - 24px);margin:12px auto 0;text-align:center;font-family:system-ui,-apple-system,sans-serif}
+ .fh-lang-toggle{border:0;border-radius:999px;padding:8px 14px;background:#0b4f86;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px}
+ .fh-readonly-badge{display:inline-block;background:#fff3cd;color:#7a5200;border:1px solid #f0cc6a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700}
  ${adminMode?'.smart-form,.submission-section,.signature-area,#formHeading,#fillInfoLabel,#completionMessage,.footnote{display:none!important}':''}
- </style><div class="fh-system-nav"><button type="button" onclick="${backAction}">← ${adminMode?txt.backAdmin:txt.backUser}</button>${adminMode?`<span class="fh-readonly-badge">${txt.readonly}</span>`:''}</div>`;
- const bottom=`<div style="max-width:680px;width:calc(100% - 24px);margin:18px auto 30px;text-align:center;font-family:system-ui"><button type="button" onclick="${backAction}" style="border:0;border-radius:999px;padding:12px 22px;background:#0b4f86;color:#fff;font-weight:700;font-size:14px;cursor:pointer">← ${adminMode?txt.backAdmin:txt.bottomUser}</button></div>`;
+ </style>${adminMode?`<div class="fh-system-strip"><span class="fh-readonly-badge">${txt.readonly}</span></div>`:''}`;
+ const bottom=`<div style="max-width:680px;width:calc(100% - 24px);margin:22px auto 34px;text-align:center;font-family:system-ui"><a href="${backHref}" style="display:inline-block;text-decoration:none;border:0;border-radius:999px;padding:12px 24px;background:#0b4f86;color:#fff;font-weight:700;font-size:14px;cursor:pointer">← ${adminMode?txt.backAdmin:txt.bottomUser}</a></div>`;
  let html=data.source_html;
  html=html.replace(/<body([^>]*)>/i,m=>m+nav);
  html=html.replace(/<\/body>/i,bottom+'</body>');

@@ -9,3 +9,6 @@
 .pending-row:first-of-type{border-top:0}
 .account-warning{margin-top:8px;padding:7px 10px;border-radius:10px;background:#fff3cd;color:#7a5200;font-size:12px;font-weight:700}
 @media(max-width:640px){.pending-row{align-items:flex-start;flex-direction:column}.pending-row>.row{width:100%}.pending-row>.row button{flex:1}}
+
+/* V8: inline login hint and notification badges */
+.label-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.inline-hint{font-size:11px;font-weight:500;color:#7b8b9b}.tab-with-badge{position:relative}.notify-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#d92d20;color:#fff;font-size:11px;font-weight:800;line-height:1;margin-left:6px;vertical-align:middle;box-shadow:0 0 0 2px #fff}.file-request-link{display:inline;text-decoration:underline;background:none!important;color:#1a4e7a!important;padding:0!important;border-radius:0!important;font-weight:700;cursor:pointer}.file-request-link:hover{opacity:.8}.empty-request{max-width:620px;margin:0 auto;line-height:1.65}.admin-tabs button .notify-badge{pointer-events:none}
