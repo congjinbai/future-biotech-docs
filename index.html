@@ -86,6 +86,10 @@
   <div id="registerHint" class="muted">个人编号使用您的 11 位手机号码，必须以 8 或 1 开头。</div>
   <div id="registerError" class="error hidden"></div>
   <div id="registerSuccess" class="notice hidden"></div>
+  <div id="registrationWaitingControls" class="hidden" style="margin-top:12px">
+    <button type="button" id="registrationRefreshBtn" class="primary wide">↻ 更新</button>
+    <p id="registrationRefreshHint" class="muted" style="margin:10px 4px 0;line-height:1.55;text-align:center">请手动更新界面。管理员通过验证后，更新即可自动进入系统。</p>
+  </div>
   <div class="dialog-actions"><button type="button" class="ghost" data-close-dialog="registerDialog" id="registerCancelBtn">取消</button><button type="button" id="registerConfirmBtn" class="primary">注册</button></div>
 </div></dialog>
 
@@ -198,6 +202,9 @@
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
   });
   const successEl = document.getElementById('registerSuccess');
+  const waitingControls = document.getElementById('registrationWaitingControls');
+  const refreshBtn = document.getElementById('registrationRefreshBtn');
+  const refreshHint = document.getElementById('registrationRefreshHint');
   if (!successEl) return;
 
   let timer = null;
@@ -210,6 +217,22 @@
     return 'zh';
   }
 
+  function applyWaitingLanguage(){
+    const ru=currentUiLang()==='ru';
+    if(refreshBtn) refreshBtn.textContent = ru ? '↻ Обновить' : '↻ 更新';
+    if(refreshHint) refreshHint.textContent = ru
+      ? 'Обновите страницу вручную. После подтверждения администратором обновление автоматически откроет систему.'
+      : '请手动更新界面。管理员通过验证后，更新即可自动进入系统。';
+  }
+
+  if(refreshBtn){
+    refreshBtn.addEventListener('click',()=>{
+      refreshBtn.disabled=true;
+      refreshBtn.textContent=currentUiLang()==='ru'?'Проверка…':'正在检查……';
+      location.reload();
+    });
+  }
+
   function notifyApproved(){
     if(lastApproved) return;
     lastApproved = true;
@@ -218,6 +241,7 @@
       ? 'Регистрация подтверждена. Вход в систему…'
       : '注册已通过，正在进入系统……';
     successEl.classList.remove('hidden');
+    waitingControls?.classList.add('hidden');
     try{
       const AC=window.AudioContext||window.webkitAudioContext;
       const ac=new AC();
@@ -262,13 +286,24 @@
 
   const observer=new MutationObserver(()=>{
     const visible=!successEl.classList.contains('hidden') && successEl.textContent.trim();
-    if(visible) startWaiting(); else stopWaiting();
+    if(visible && !lastApproved){
+      applyWaitingLanguage();
+      waitingControls?.classList.remove('hidden');
+      startWaiting();
+    }else{
+      waitingControls?.classList.add('hidden');
+      if(!visible) stopWaiting();
+    }
   });
   observer.observe(successEl,{attributes:true,childList:true,subtree:true,characterData:true});
 
   // Also covers a page restored from bfcache while the approval screen is still visible.
   window.addEventListener('pageshow',()=>{
-    if(!successEl.classList.contains('hidden') && successEl.textContent.trim()) startWaiting();
+    if(!successEl.classList.contains('hidden') && successEl.textContent.trim()){
+      applyWaitingLanguage();
+      waitingControls?.classList.remove('hidden');
+      startWaiting();
+    }
   });
 })();
 </script>
