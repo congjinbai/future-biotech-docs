@@ -53,6 +53,22 @@ html[lang^="ru"] #deleteUsersModeBtn {
   }
 }
 </style>
+
+<style id="v29-admin-tabs-style">
+/* V29: real page-tab navigation. The selected page is controlled by #adminHome[data-page],
+   so language re-rendering cannot accidentally reveal another panel. */
+.admin-tabs{display:flex;gap:0;margin-top:14px;overflow-x:auto;overflow-y:hidden;align-items:flex-end;border-bottom:1px solid #bfc9d6;padding-left:0;scrollbar-width:none}
+.admin-tabs::-webkit-scrollbar{display:none}
+.admin-tabs button{flex:0 0 auto;background:#e8edf3;color:#24384d;border:1px solid #bfc9d6;border-bottom:0;border-radius:8px 8px 0 0;padding:8px 18px;min-height:38px;font-size:14px;font-weight:650;box-shadow:none;margin:0 -1px 0 0;white-space:nowrap}
+.admin-tabs button.active{position:relative;z-index:2;background:#fff;color:#14395f;border-color:#8fa2b8;box-shadow:inset 0 3px 0 #1a4e7a}
+.admin-tabs button.active::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:#fff}
+#adminHome[data-page="templates"] .admin-tab,#adminHome[data-page="documents"] .admin-tab,#adminHome[data-page="users"] .admin-tab,#adminHome[data-page="receipts"] .admin-tab{display:none!important}
+#adminHome[data-page="templates"] #tab-templates{display:block!important}
+#adminHome[data-page="documents"] #tab-documents{display:block!important}
+#adminHome[data-page="users"] #tab-users{display:block!important}
+#adminHome[data-page="receipts"] #tab-receipts{display:block!important}
+@media(max-width:640px){.admin-tabs button{padding:8px 13px;font-size:13px;min-height:36px}.admin-tabs{padding-left:2px}}
+</style>
 </head>
 <body>
 <div id="loginView" class="center-shell hidden">
@@ -88,7 +104,7 @@ html[lang^="ru"] #deleteUsersModeBtn {
       <div id="userEmpty" class="empty hidden">目前没有文件。</div>
     </section>
 
-    <section id="adminHome" class="hidden">
+    <section id="adminHome" class="hidden" data-page="templates">
       <nav class="admin-tabs">
         <button type="button" data-tab="templates" class="active" id="tabTemplatesBtn">模板</button>
         <button type="button" data-tab="documents" id="tabDocumentsBtn">文件</button>
@@ -399,7 +415,7 @@ html[lang^="ru"] #deleteUsersModeBtn {
   document.getElementById('receiptSelectAll')?.addEventListener('click',()=>{if(receiptManagerMode)return;box.querySelectorAll('.receipt-check').forEach(ch=>{ch.checked=true;selectedReceipts.add(ch.value)})});
   document.getElementById('receiptClearAll')?.addEventListener('click',()=>{if(receiptManagerMode)return;selectedReceipts.clear();box.querySelectorAll('.receipt-check').forEach(ch=>ch.checked=false)});
   document.getElementById('receiptDeleteSelected')?.addEventListener('click',async()=>{if(receiptManagerMode)return;if(!selectedReceipts.size)return alert(ru()?'Выберите хотя бы одну расписку.':'请至少选择一个回执。');if(!confirm(ru()?`Удалить выбранные расписки (${selectedReceipts.size})?`:`确认删除所选 ${selectedReceipts.size} 个回执？`))return;const rows=[...box.querySelectorAll('[data-rid]')].filter(r=>selectedReceipts.has(r.dataset.rid));for(const row of rows){const btn=row.querySelector('.receipt-delete');try{await deleteReceipt(row.dataset.rid,btn?.dataset.path,false)}catch(e){}}selectedReceipts.clear();loadInbox()});
-  if(tabBtn)tabBtn.addEventListener('click',()=>{document.querySelectorAll('.admin-tab').forEach(x=>x.classList.add('hidden'));document.querySelectorAll('.admin-tabs button').forEach(x=>x.classList.remove('active'));panel?.classList.remove('hidden');tabBtn.classList.add('active');loadInbox()});
+  window.FH_LOAD_RECEIPTS=loadInbox; if(tabBtn)tabBtn.addEventListener('click',()=>loadInbox());
   new MutationObserver(()=>{updateReceiptLang();if(panel&&!panel.classList.contains('hidden'))loadInbox()}).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
   updateReceiptLang();setTimeout(loadInbox,1000);setInterval(loadInbox,15000);
 })();
