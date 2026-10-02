@@ -494,4 +494,45 @@ html[lang^="ru"] #deleteUsersModeBtn {
   });
 })();
 </script>
+
+<style id="v26-latin-password-keyboard-style">
+#latinPasswordKeyboard{position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#fff;border-top:1px solid #cfd8e6;box-shadow:0 -10px 30px rgba(20,40,70,.18);padding:10px 10px calc(10px + env(safe-area-inset-bottom));display:none}
+#latinPasswordKeyboard.visible{display:block}
+#latinPasswordKeyboard .latin-kb-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:13px;color:#5d718a}
+#latinPasswordKeyboard .latin-kb-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:5px}
+#latinPasswordKeyboard button{min-width:0;border:0;border-radius:9px;background:#eef3fb;color:#173655;padding:9px 2px;font-size:14px;font-weight:700;touch-action:manipulation}
+#latinPasswordKeyboard button.kb-wide{grid-column:span 2;background:#dfe8f5}
+#latinPasswordKeyboard button.kb-done{grid-column:span 2;background:#205684;color:#fff}
+@media(min-width:900px){#latinPasswordKeyboard{display:none!important}}
+</style>
+<div id="latinPasswordKeyboard" aria-hidden="true">
+  <div class="latin-kb-head"><span id="latinKbLabel">English password keyboard</span><button type="button" id="latinKbClose" class="kb-wide">✕</button></div>
+  <div class="latin-kb-grid" id="latinKbGrid"></div>
+</div>
+<script id="v26-registration-and-password-fixes">
+(()=>{
+  // V26: password keyboard is implemented inside the web app because iOS does not let a website force the system keyboard language.
+  const passwordIds=['password','registerPassword','registerPassword2','myNewPassword','myNewPassword2'];
+  const isTouch=()=>window.matchMedia('(max-width:899px) and (pointer:coarse)').matches || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const panel=document.getElementById('latinPasswordKeyboard'),grid=document.getElementById('latinKbGrid'),label=document.getElementById('latinKbLabel');
+  let target=null, upper=false;
+  const letters='qwertyuiopasdfghjklzxcvbnm'.split('');
+  const digits='1234567890'.split('');
+  function langRu(){return (document.documentElement.lang||'').toLowerCase().startsWith('ru')}
+  function renderKeys(){
+    if(!grid)return; grid.innerHTML='';
+    [...digits,...letters].forEach(k=>{const b=document.createElement('button');b.type='button';b.textContent=/[a-z]/.test(k)?(upper?k.toUpperCase():k):k;b.dataset.key=b.textContent;grid.appendChild(b)});
+    const sh=document.createElement('button');sh.type='button';sh.className='kb-wide';sh.textContent=upper?'abc':'ABC';sh.onclick=()=>{upper=!upper;renderKeys()};grid.appendChild(sh);
+    const bk=document.createElement('button');bk.type='button';bk.className='kb-wide';bk.textContent='⌫';bk.onclick=()=>{if(target)target.value=target.value.slice(0,-1)};grid.appendChild(bk);
+    const done=document.createElement('button');done.type='button';done.className='kb-done';done.textContent=langRu()?'Готово':'完成';done.onclick=hide;grid.appendChild(done);
+    grid.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{if(target){target.value+=b.dataset.key;target.dispatchEvent(new Event('input',{bubbles:true}))}});
+  }
+  function show(el){if(!isTouch()||!panel)return;target=el;el.readOnly=true;label.textContent=langRu()?'Английская клавиатура для пароля':'英文密码键盘';renderKeys();panel.classList.add('visible');panel.setAttribute('aria-hidden','false');setTimeout(()=>panel.scrollIntoView({block:'end'}),0)}
+  function hide(){if(target){target.readOnly=false;target.blur()}target=null;panel?.classList.remove('visible');panel?.setAttribute('aria-hidden','true')}
+  document.getElementById('latinKbClose')?.addEventListener('click',hide);
+  passwordIds.forEach(id=>{const el=document.getElementById(id);if(!el)return;el.setAttribute('lang','en');el.setAttribute('autocapitalize','none');el.setAttribute('autocorrect','off');el.spellcheck=false;el.setAttribute('inputmode','text');el.addEventListener('focus',()=>show(el));el.addEventListener('pointerdown',()=>{if(isTouch())show(el)})});
+  document.addEventListener('click',e=>{if(panel?.classList.contains('visible')&&target&&!panel.contains(e.target)&&e.target!==target&&!passwordIds.includes(e.target?.id))hide()});
+})();
+</script>
+
 </body></html>
