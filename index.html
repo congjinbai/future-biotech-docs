@@ -434,24 +434,8 @@ html[lang^="ru"] #deleteUsersModeBtn {
 
 <script id="v25-language-and-name-fixes">
 (()=>{
-  // Keep the currently selected administrator tab when changing interface language.
-  const langBtn=document.getElementById('toggleLang');
-  if(langBtn){
-    langBtn.addEventListener('click',()=>{
-      const active=document.querySelector('.admin-tabs button.active');
-      const tab=active?.dataset?.tab || null;
-      if(!tab)return;
-      const ids={templates:'tabTemplatesBtn',documents:'tabDocumentsBtn',users:'tabUsersBtn',receipts:'tabReceiptsBtn'};
-      const restore=()=>{
-        const b=document.getElementById(ids[tab]);
-        const panel=document.getElementById('tab-'+tab);
-        // Re-open the same section after the original language renderer finishes.
-        if(b && (!b.classList.contains('active') || panel?.classList.contains('hidden'))) b.click();
-      };
-      setTimeout(restore,0);
-      setTimeout(restore,80);
-    },true);
-  }
+  // V28: tab preservation is handled atomically by app.js setLang(); no extra click listener here.
+
 
   function russianNameCase(value){
     return String(value||'')
